@@ -1,0 +1,112 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  plan      String   @default("starter")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  outlets      Outlet[]
+  products     Product[]
+  transactions Transaction[]
+  users        User[]
+
+  @@map("tenants")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  outletId  String?  @map("outlet_id")
+  name      String
+  email     String
+  password  String
+  role      String   @default("cashier") // cashier | manager | admin
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  outlet       Outlet?      @relation(fields: [outletId], references: [id])
+  transactions Transaction[]
+
+  @@unique([tenantId, email])
+  @@map("users")
+}
+
+model Outlet {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  name      String
+  address   String?
+  city      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  inventory    Inventory[]
+  transactions Transaction[]
+  users        User[]
+
+  @@map("outlets")
+}
+
+model Product {
+  id         String   @id @default(uuid())
+  tenantId   String   @map("tenant_id")
+  sku        String
+  name       String
+  category   String   @default("general")
+  basePrice  Decimal  @map("base_price") @db.Decimal(12, 2)
+  attributes Json     @default("{}")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant      @relation(fields: [tenantId], references: [id])
+  inventory Inventory[]
+
+  @@unique([tenantId, sku])
+  @@map("products")
+}
+
+model Inventory {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  outletId  String   @map("outlet_id")
+  productId String   @map("product_id")
+  quantity  Int      @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  outlet  Outlet  @relation(fields: [outletId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([outletId, productId])
+  @@map("inventory")
+}
+
+model Transaction {
+  id              String   @id @default(uuid())
+  tenantId        String   @map("tenant_id")
+  outletId        String   @map("outlet_id")
+  cashierId       String?  @map("cashier_id")
+  totalAmount     Decimal  @map("total_amount") @db.Decimal(12, 2)
+  paymentMethod   String   @default("cash") @map("payment_method")
+  lineItems       Json     @map("line_items")
+  receiptPath     String?  @map("receipt_path")
+  idempotencyKey  String   @unique @map("idempotency_key")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  tenant  Tenant @relation(fields: [tenantId], references: [id])
+  outlet  Outlet @relation(fields: [outletId], references: [id])
+  cashier User?  @relation(fields: [cashierId], references: [id])
+
+  @@map("transactions")
+}
