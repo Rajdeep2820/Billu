@@ -18,13 +18,16 @@ const payRoutes = require('./routes/pay');
 const app = express();
 const httpServer = http.createServer(app);
 
+const corsOptions = {
+  origin: function (origin, callback) { callback(null, true); },
+  credentials: true
+};
+
 // Socket.io setup
-const io = new Server(httpServer, {
-  cors: { origin: 'http://localhost:5173', credentials: true }
-});
+const io = new Server(httpServer, { cors: corsOptions });
 
 // Middleware
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+app.use(cors(corsOptions));
 app.use(express.json());
 
 
