@@ -19,7 +19,11 @@ export default function POS() {
   useEffect(() => {
     api.get('/products?limit=100').then(res => setProducts(res.data.products));
 
-    const socket = io('http://localhost:4000', { auth: { token } });
+    // Connect via Nginx proxy (works in both dev and Docker)
+    const socketUrl = window.location.hostname === 'localhost'
+      ? (window.location.port === '5173' ? 'http://localhost:4000' : window.location.origin)
+      : window.location.origin;
+    const socket = io(socketUrl, { auth: { token }, path: '/socket.io/' });
     socket.on('receipt:ready', (data) => {
       setReceiptUrl(data.receiptUrl);
     });
@@ -75,17 +79,39 @@ export default function POS() {
   const total = cart.reduce((sum, i) => sum + (parseFloat(i.unitPrice) * i.qty), 0);
   const itemCount = cart.reduce((sum, i) => sum + i.qty, 0);
 
+  const pollTimerRef = useRef(null);
+
+  const pollForReceipt = (transactionId) => {
+    let attempts = 0;
+    pollTimerRef.current = setInterval(async () => {
+      attempts++;
+      try {
+        const res = await api.get(`/sales/${transactionId}`);
+        if (res.data?.receiptPath) {
+          setReceiptUrl(res.data.receiptPath);
+          clearInterval(pollTimerRef.current);
+        }
+      } catch (_) {}
+      if (attempts >= 15) clearInterval(pollTimerRef.current); // give up after 30s
+    }, 2000);
+  };
+
   const handleCheckout = async () => {
     if (!cart.length) return;
     setLoading(true);
     setReceiptUrl(null);
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     try {
       const payload = {
         paymentMethod: payMethod,
         lineItems: cart.map(i => ({ sku: i.sku, name: i.name, qty: i.qty, unitPrice: i.unitPrice }))
       };
-      await api.post('/sales', payload);
+      const res = await api.post('/sales', payload);
       setCart([]);
+      // Start polling for receipt (socket is secondary; polling is reliable in Docker too)
+      if (res.data?.transaction?.id) {
+        pollForReceipt(res.data.transaction.id);
+      }
     } catch (err) {
       alert(err.response?.data?.error || 'Checkout failed');
     } finally {
