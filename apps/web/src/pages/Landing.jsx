@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import '../win95.css';
 
@@ -8,10 +8,7 @@ export default function Landing() {
   const { isAuth } = useAuth();
 
   // If already logged in, redirect
-  if (isAuth) {
-    navigate('/dashboard', { replace: true });
-    return null;
-  }
+  if (isAuth) return <Navigate to="/dashboard" replace />;
 
   return (
     <div className="win95-page">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import '../win95.css';
 
@@ -14,9 +14,9 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const googleBtnRef = useRef(null);
 
-  useEffect(() => {
-    if (isAuth) { navigate('/dashboard', { replace: true }); return; }
+  if (isAuth) return <Navigate to="/dashboard" replace />;
 
+  useEffect(() => {
     if (GOOGLE_CLIENT_ID && window.google) {
       window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
