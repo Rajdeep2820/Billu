@@ -104,6 +104,7 @@ export default function POS() {
     try {
       const payload = {
         paymentMethod: payMethod,
+        origin: window.location.origin, // Tell API exactly what URL to put in the QR code
         lineItems: cart.map(i => ({ sku: i.sku, name: i.name, qty: i.qty, unitPrice: i.unitPrice }))
       };
       const res = await api.post('/sales', payload);
@@ -239,15 +240,15 @@ export default function POS() {
               {/* Payment method */}
               <div style={{display:'flex',gap:4,marginBottom:8}}>
                 <button
-                  className={`win95-btn ${payMethod === 'cash' ? 'win95-btn-primary' : ''}`}
-                  style={{flex:1,fontSize:16}}
+                  className={`win95-btn ${payMethod === 'cash' ? 'win95-btn-toggled' : ''}`}
+                  style={{flex:1,fontSize:16,padding:'8px 0'}}
                   onClick={() => setPayMethod('cash')}
                 >
                   💵 Cash
                 </button>
                 <button
-                  className={`win95-btn ${payMethod === 'card' ? 'win95-btn-primary' : ''}`}
-                  style={{flex:1,fontSize:16}}
+                  className={`win95-btn ${payMethod === 'card' ? 'win95-btn-toggled' : ''}`}
+                  style={{flex:1,fontSize:16,padding:'8px 0'}}
                   onClick={() => setPayMethod('card')}
                 >
                   💳 Card/UPI
