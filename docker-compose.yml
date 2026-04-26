@@ -1,6 +1,5 @@
-version: '3.8'
-
 services:
+  # ── PostgreSQL Database ──────────────────────────
   postgres:
     image: postgres:16-alpine
     container_name: billu_postgres
@@ -8,18 +7,59 @@ services:
     environment:
       POSTGRES_PASSWORD: billu_secret
       POSTGRES_HOST_AUTH_METHOD: trust
-    ports:
-      - "5450:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # ── Redis Cache / Queue ──────────────────────────
   redis:
     image: redis:7-alpine
     container_name: billu_redis
     restart: always
-    ports:
-      - "6379:6379"
     command: redis-server --requirepass redis_secret
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Node.js API Server ───────────────────────────
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: billu_api
+    restart: always
+    env_file:
+      - ./apps/api/.env
+    environment:
+      DATABASE_URL: postgresql://postgres@postgres:5432/billu_pos?schema=public
+      REDIS_URL: redis://:redis_secret@redis:6379
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── React Web App (Nginx) ─────────────────────────
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost/api
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
+    container_name: billu_web
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - api
 
 volumes:
   postgres_data:
