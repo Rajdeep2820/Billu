@@ -9,23 +9,31 @@ export function AuthProvider({ children }) {
   });
   const [token, setToken] = useState(() => localStorage.getItem('billu_token') || null);
 
+  const saveAuth = useCallback((token, user) => {
+    localStorage.setItem('billu_token', token);
+    localStorage.setItem('billu_user', JSON.stringify(user));
+    setToken(token);
+    setUser(user);
+  }, []);
+
   const login = useCallback(async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password });
-    localStorage.setItem('billu_token', data.token);
-    localStorage.setItem('billu_user', JSON.stringify(data.user));
-    setToken(data.token);
-    setUser(data.user);
+    saveAuth(data.token, data.user);
     return data;
-  }, []);
+  }, [saveAuth]);
 
   const register = useCallback(async (businessName, email, password) => {
     const { data } = await api.post('/auth/register', { businessName, email, password });
-    localStorage.setItem('billu_token', data.token);
-    localStorage.setItem('billu_user', JSON.stringify({ email, role: 'admin', tenantId: data.tenant.id }));
-    setToken(data.token);
-    setUser({ email, role: 'admin', tenantId: data.tenant.id });
+    const u = { id: data.user?.id, email, role: 'admin', name: businessName + ' Admin', tenantId: data.tenant.id, outletId: data.user?.outletId };
+    saveAuth(data.token, u);
+    return { ...data, isNewUser: true };
+  }, [saveAuth]);
+
+  const googleLogin = useCallback(async (credential, businessName) => {
+    const { data } = await api.post('/auth/google', { credential, businessName });
+    saveAuth(data.token, data.user);
     return data;
-  }, []);
+  }, [saveAuth]);
 
   const logout = useCallback(() => {
     localStorage.removeItem('billu_token');
@@ -35,7 +43,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, isAuth: !!token }}>
+    <AuthContext.Provider value={{ user, token, login, register, googleLogin, logout, isAuth: !!token }}>
       {children}
     </AuthContext.Provider>
   );
