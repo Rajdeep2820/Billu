@@ -10,7 +10,7 @@ function initQueues(io) {
   receiptQueue = new Bull('receipts', process.env.REDIS_URL);
 
   receiptQueue.process('generate-receipt', 3, async (job) => {
-    const { transactionId, tenantId, outletId } = job.data;
+    const { transactionId, tenantId, outletId, origin } = job.data;
 
     // Fetch full transaction
     const tx = await prisma.transaction.findUnique({
@@ -28,7 +28,10 @@ function initQueues(io) {
     const s3Key = `receipts/${tenantId}/${transactionId}.pdf`;
 
     // QR points to the smart landing page (UPI pay + receipt download)
-    const apiHost = process.env.API_HOST || `http://localhost:${process.env.PORT || 4000}`;
+    let apiHost = origin || process.env.API_HOST || `http://localhost`;
+    if (process.env.NODE_ENV === 'production' || process.env.DOCKER_ENV) {
+      apiHost = apiHost.replace(/:4000\/?$/, ''); // strip :4000
+    }
     const landingUrl = `${apiHost}/pay/${transactionId}`;
     const s3Url = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${s3Key}`;
     const qrDataUrl = await QRCode.toDataURL(landingUrl);
@@ -69,9 +72,10 @@ function initQueues(io) {
 
       for (const item of tx.lineItems) {
         const amount = (parseFloat(item.unitPrice) * item.qty).toFixed(2);
-        doc.text(item.name.substring(0, 18), 20, doc.y, { continued: true, width: 100 });
-        doc.text(String(item.qty), 120, doc.y, { continued: true, width: 30, align: 'right' });
-        doc.text(`₹${amount}`, 150, doc.y, { width: 56, align: 'right' });
+        const yBefore = doc.y;
+        doc.text(item.name.substring(0, 18), 20, yBefore, { width: 100 });
+        doc.text(String(item.qty), 120, yBefore, { width: 30, align: 'right' });
+        doc.text(`Rs.${amount}`, 150, yBefore, { width: 56, align: 'right' });
       }
 
       doc.moveDown(0.3);
@@ -80,15 +84,19 @@ function initQueues(io) {
 
       // Total
       doc.fontSize(10).font('Helvetica-Bold');
-      doc.text(`TOTAL`, 20, doc.y, { continued: true, width: 130 });
-      doc.text(`₹${parseFloat(tx.totalAmount).toFixed(2)}`, 150, doc.y, { width: 56, align: 'right' });
+      const totalY = doc.y;
+      doc.text(`TOTAL`, 20, totalY, { width: 130 });
+      doc.text(`Rs.${parseFloat(tx.totalAmount).toFixed(2)}`, 150, totalY, { width: 56, align: 'right' });
       doc.moveDown(1);
 
       // QR Code
-      doc.image(qrBuffer, { fit: [80, 80], align: 'center' });
-      doc.moveDown(0.5);
-      doc.fontSize(7).font('Helvetica').text('Scan to view digital receipt', { align: 'center' });
-      doc.text('Thank you for shopping!', { align: 'center' });
+      const qrSize = 75;
+      const xPos = (226 - qrSize) / 2;
+      doc.image(qrBuffer, xPos, doc.y, { width: qrSize, height: qrSize });
+      doc.y += qrSize + 10; // Explicitly shift Y down past the image
+      
+      doc.fontSize(7).font('Helvetica').text('Scan to view digital receipt', 20, doc.y, { width: 186, align: 'center' });
+      doc.text('Thank you for shopping!', 20, doc.y, { width: 186, align: 'center' });
 
       doc.end();
     });
