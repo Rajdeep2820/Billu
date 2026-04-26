@@ -70,7 +70,8 @@ router.post('/commit', upload.single('file'), async (req, res, next) => {
 
     // mapping passed as JSON string in form field
     const mapping = JSON.parse(req.body.mapping || '{}');
-    const outletId = req.body.outletId;
+    const outletId = req.body.outletId || req.user.outletId;
+    const defaultQuantity = parseInt(req.body.defaultQuantity || '0', 10);
     const { tenantId } = req.user;
 
     const rows = parseFile(req.file.buffer, req.file.mimetype, req.file.originalname);
@@ -85,7 +86,8 @@ router.post('/commit', upload.single('file'), async (req, res, next) => {
       const name = String(row[mapping.name] || '').trim();
       const basePrice = parseFloat(row[mapping.basePrice]);
       const category = String(row[mapping.category] || 'general').trim().toLowerCase();
-      const quantity = parseInt(row[mapping.quantity] || 0, 10);
+      const rawQty = mapping.quantity ? parseInt(row[mapping.quantity] || 0, 10) : defaultQuantity;
+      const quantity = isNaN(rawQty) ? defaultQuantity : rawQty;
 
       // Validation
       if (!sku) { errors.push({ row: rowNum, error: 'Missing SKU' }); continue; }
