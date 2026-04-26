@@ -1,9 +1,8 @@
 const Bull = require('bull');
 const PDFDocument = require('pdfkit');
 const QRCode = require('qrcode');
-const fs = require('fs');
-const path = require('path');
 const prisma = require('../services/prisma');
+const { uploadReceipt } = require('../services/s3');
 
 let receiptQueue;
 
@@ -26,23 +25,23 @@ function initQueues(io) {
     if (!tx) throw new Error(`Transaction ${transactionId} not found`);
     if (tx.receiptPath) return { skipped: true }; // already generated (idempotent)
 
-    // Ensure receipts directory exists
-    const dir = path.resolve(process.env.RECEIPTS_DIR || './receipts', tenantId);
-    fs.mkdirSync(dir, { recursive: true });
+    const s3Key = `receipts/${tenantId}/${transactionId}.pdf`;
 
-    const filename = `${transactionId}.pdf`;
-    const filepath = path.join(dir, filename);
-
-    // Generate QR code (points to receipt URL)
-    const receiptUrl = `http://localhost:${process.env.PORT || 4000}/receipts/${tenantId}/${filename}`;
-    const qrDataUrl = await QRCode.toDataURL(receiptUrl);
+    // QR points to the smart landing page (UPI pay + receipt download)
+    const apiHost = process.env.API_HOST || `http://localhost:${process.env.PORT || 4000}`;
+    const landingUrl = `${apiHost}/pay/${transactionId}`;
+    const s3Url = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${s3Key}`;
+    const qrDataUrl = await QRCode.toDataURL(landingUrl);
     const qrBuffer = Buffer.from(qrDataUrl.split(',')[1], 'base64');
 
-    // Generate PDF receipt
-    await new Promise((resolve, reject) => {
+    // Generate PDF receipt into an in-memory buffer
+    const pdfBuffer = await new Promise((resolve, reject) => {
       const doc = new PDFDocument({ size: [226, 600], margin: 20 }); // 80mm thermal width
-      const stream = fs.createWriteStream(filepath);
-      doc.pipe(stream);
+      const chunks = [];
+
+      doc.on('data', (chunk) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
 
       // Header
       doc.fontSize(14).font('Helvetica-Bold').text(tx.tenant.name, { align: 'center' });
@@ -92,26 +91,27 @@ function initQueues(io) {
       doc.text('Thank you for shopping!', { align: 'center' });
 
       doc.end();
-      stream.on('finish', resolve);
-      stream.on('error', reject);
     });
 
-    // Update transaction with receipt path
-    const relativePath = `${tenantId}/${filename}`;
+    // Upload to S3
+    const publicUrl = await uploadReceipt(s3Key, pdfBuffer);
+    console.log(`[S3] Uploaded receipt: ${publicUrl}`);
+
+    // Update transaction with the S3 URL as receipt path
     await prisma.transaction.update({
       where: { id: transactionId },
-      data: { receiptPath: relativePath },
+      data: { receiptPath: publicUrl },
     });
 
-    // Notify dashboard via socket
+    // Notify dashboard via socket — send S3 PDF URL for vendor's "View Receipt" link
     if (io) {
       io.to(`tenant:${tenantId}`).emit('receipt:ready', {
         transactionId,
-        receiptUrl,
+        receiptUrl: publicUrl,
       });
     }
 
-    return { receiptPath: relativePath };
+    return { receiptPath: publicUrl };
   });
 
   receiptQueue.on('failed', (job, err) => {
