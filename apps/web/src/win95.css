@@ -208,12 +208,15 @@
   white-space: nowrap;
 }
 .win95-btn:hover { opacity: 1; }
-.win95-btn:active {
+.win95-btn:active, .win95-btn-toggled {
   border-top: 2px solid var(--win-dark);
   border-left: 2px solid var(--win-dark);
   border-right: 2px solid var(--win-white);
   border-bottom: 2px solid var(--win-white);
   padding: 6px 23px 4px 25px;
+}
+.win95-btn-toggled {
+  background: var(--win-light);
 }
 .win95-btn:focus {
   outline: 1px dotted var(--win-black);
