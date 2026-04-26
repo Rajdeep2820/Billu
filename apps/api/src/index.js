@@ -13,6 +13,7 @@ const inventoryRoutes = require('./routes/inventory');
 const salesRoutes = require('./routes/sales');
 const dashboardRoutes = require('./routes/dashboard');
 const importRoutes = require('./routes/import');
+const payRoutes = require('./routes/pay');
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -26,8 +27,6 @@ const io = new Server(httpServer, {
 app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
 app.use(express.json());
 
-// Serve generated receipts statically
-app.use('/receipts', express.static(process.env.RECEIPTS_DIR || './receipts'));
 
 // Attach io to every request so routes can emit events
 app.use((req, res, next) => {
@@ -42,6 +41,7 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/import', importRoutes);
+app.use('/pay', payRoutes);
 
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok', ts: new Date() }));
