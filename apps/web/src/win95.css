@@ -1,0 +1,878 @@
+/* ═══════════════════════════════════════════════════════
+   Windows 95/98 Vintage Theme — Billu POS
+   Pixel-accurate recreation of the classic Microsoft UI
+   ═══════════════════════════════════════════════════════ */
+
+/* ── CSS Variables ──────────────────────────────────── */
+:root {
+  --win-bg: #008080;
+  --win-gray: #c0c0c0;
+  --win-dark: #808080;
+  --win-darker: #404040;
+  --win-white: #ffffff;
+  --win-black: #000000;
+  --win-blue: #000080;
+  --win-title-text: #ffffff;
+  --win-border-light: #dfdfdf;
+  --win-border-dark: #404040;
+  --win-font: 'VT323', 'Courier New', monospace;
+}
+
+/* ── Reset for Win95 pages ──────────────────────────── */
+.win95-page {
+  font-family: var(--win-font);
+  font-size: 20px;
+  color: var(--win-black);
+  background: var(--win-bg);
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent, transparent 2px,
+    rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px
+  );
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.win95-page *, .win95-page *::before, .win95-page *::after {
+  font-family: var(--win-font);
+  border-radius: 0 !important;
+}
+
+/* ── Desktop Area ───────────────────────────────────── */
+.win95-desktop {
+  flex: 1;
+  padding: 6px;
+  padding-bottom: 46px; /* space for taskbar */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: margin-left 0.3s ease;
+  min-height: 0;
+}
+.win95-desktop.sidebar-open {
+  margin-left: 240px;
+}
+
+/* ── Window ─────────────────────────────────────────── */
+.win95-window {
+  background: var(--win-gray);
+  border-top: 2px solid var(--win-white);
+  border-left: 2px solid var(--win-white);
+  border-right: 2px solid var(--win-dark);
+  border-bottom: 2px solid var(--win-dark);
+  width: 100%;
+  max-width: 960px;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+/* Title Bar */
+.win95-titlebar {
+  background: linear-gradient(to right, #000080, #1084d0);
+  color: var(--win-title-text);
+  display: flex;
+  align-items: center;
+  padding: 3px 4px;
+  height: 32px;
+  user-select: none;
+}
+.win95-titlebar-text {
+  flex: 1;
+  font-size: 22px;
+  font-weight: bold;
+  padding-left: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.win95-titlebar-controls {
+  display: flex;
+  gap: 2px;
+}
+.win95-titlebar-btn {
+  width: 20px;
+  height: 18px;
+  background: var(--win-gray);
+  border-top: 1px solid var(--win-white);
+  border-left: 1px solid var(--win-white);
+  border-right: 1px solid var(--win-dark);
+  border-bottom: 1px solid var(--win-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  color: var(--win-black);
+}
+.win95-titlebar-btn:active {
+  border-top: 1px solid var(--win-dark);
+  border-left: 1px solid var(--win-dark);
+  border-right: 1px solid var(--win-white);
+  border-bottom: 1px solid var(--win-white);
+}
+.win95-btn-minimize { background: #028b36; color: #fff; }
+.win95-btn-minimize:hover { background: #028b36; }
+.win95-btn-maximize { background: #f5c542; color: #000; }
+.win95-btn-maximize:hover { background: #ffd700; }
+.win95-btn-close { background: #c31b1b; color: #fff; }
+.win95-btn-close:hover { background: #ff2020; }
+
+/* Menu Bar */
+.win95-menubar {
+  background: var(--win-gray);
+  border-bottom: 1px solid var(--win-dark);
+  padding: 2px 0;
+  display: flex;
+  font-size: 20px;
+}
+.win95-menubar-item {
+  padding: 2px 12px;
+  cursor: pointer;
+  color: var(--win-black);
+  text-decoration: none;
+  background: none;
+  border: none;
+  font-family: var(--win-font);
+  font-size: 20px;
+}
+.win95-menubar-item:hover,
+.win95-menubar-item.active {
+  background: var(--win-blue);
+  color: var(--win-white);
+}
+
+/* Window Body */
+.win95-body {
+  padding: 16px;
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+/* Status Bar */
+.win95-statusbar {
+  border-top: 2px solid var(--win-dark);
+  background: var(--win-gray);
+  display: flex;
+  padding: 2px 4px;
+  gap: 4px;
+  font-size: 16px;
+  min-height: 26px;
+}
+.win95-status-panel {
+  border-top: 1px solid var(--win-dark);
+  border-left: 1px solid var(--win-dark);
+  border-right: 1px solid var(--win-white);
+  border-bottom: 1px solid var(--win-white);
+  padding: 0px 6px;
+  white-space: nowrap;
+}
+.win95-status-panel:first-child { flex: 1; }
+
+/* ── Raised/Sunken ──────────────────────────────────── */
+.win95-raised {
+  border-top: 2px solid var(--win-white);
+  border-left: 2px solid var(--win-white);
+  border-right: 2px solid var(--win-dark);
+  border-bottom: 2px solid var(--win-dark);
+  background: var(--win-gray);
+}
+.win95-sunken {
+  border-top: 2px solid var(--win-dark);
+  border-left: 2px solid var(--win-dark);
+  border-right: 2px solid var(--win-white);
+  border-bottom: 2px solid var(--win-white);
+  background: var(--win-white);
+}
+
+/* ── Buttons ────────────────────────────────────────── */
+.win95-btn {
+  background: var(--win-gray);
+  border-top: 2px solid var(--win-white);
+  border-left: 2px solid var(--win-white);
+  border-right: 2px solid var(--win-dark);
+  border-bottom: 2px solid var(--win-dark);
+  padding: 5px 24px;
+  min-width: 90px;
+  font-family: var(--win-font);
+  font-size: 20px;
+  color: var(--win-black);
+  cursor: pointer;
+  text-align: center;
+  display: inline-block;
+  white-space: nowrap;
+}
+.win95-btn:hover { opacity: 1; }
+.win95-btn:active {
+  border-top: 2px solid var(--win-dark);
+  border-left: 2px solid var(--win-dark);
+  border-right: 2px solid var(--win-white);
+  border-bottom: 2px solid var(--win-white);
+  padding: 6px 23px 4px 25px;
+}
+.win95-btn:focus {
+  outline: 1px dotted var(--win-black);
+  outline-offset: -4px;
+}
+.win95-btn:disabled {
+  color: var(--win-dark);
+  cursor: not-allowed;
+  text-shadow: 1px 1px 0 var(--win-white);
+}
+.win95-btn-primary {
+  outline: 1px dotted var(--win-black);
+  outline-offset: -4px;
+}
+.win95-btn-primary:hover {
+  background: rgba(5, 219, 5, 0.15);
+}
+.win95-btn-danger { color: #cc0000; }
+
+/* ── Inputs ─────────────────────────────────────────── */
+.win95-input-wrap {
+  border-top: 2px solid var(--win-dark);
+  border-left: 2px solid var(--win-dark);
+  border-right: 2px solid var(--win-white);
+  border-bottom: 2px solid var(--win-white);
+  background: var(--win-white);
+  display: flex;
+  align-items: center;
+}
+.win95-input-wrap input,
+.win95-input-wrap select,
+.win95-input-wrap textarea {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--win-font);
+  font-size: 20px;
+  padding: 5px 6px;
+  width: 100%;
+  color: var(--win-black);
+}
+.win95-input-wrap select {
+  appearance: none;
+  cursor: pointer;
+  padding-right: 28px;
+}
+.win95-input-wrap:has(select) {
+  position: relative;
+}
+.win95-input-wrap:has(select)::after {
+  content: '▼';
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  bottom: 2px;
+  width: 20px;
+  background: var(--win-gray);
+  border-top: 2px solid var(--win-white);
+  border-left: 2px solid var(--win-white);
+  border-right: 2px solid var(--win-dark);
+  border-bottom: 2px solid var(--win-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  pointer-events: none;
+  color: var(--win-black);
+}
+
+/* ── Section Headers ────────────────────────────────── */
+.win95-section-header {
+  background: var(--win-blue);
+  color: var(--win-white);
+  padding: 4px 10px;
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+/* ── Data Table ─────────────────────────────────────── */
+.win95-page table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 20px;
+  background: var(--win-white);
+}
+.win95-page thead th {
+  background: var(--win-blue);
+  color: var(--win-white);
+  padding: 6px 10px;
+  text-align: left;
+  font-weight: bold;
+  font-size: 20px;
+  text-transform: none;
+  border: 1px solid var(--win-darker);
+}
+.win95-page tbody td {
+  padding: 6px 10px;
+  border: 1px solid var(--win-darker);
+  vertical-align: middle;
+  background: var(--win-white);
+}
+.win95-page tbody tr:nth-child(even) td {
+  background: #f0f0f0;
+}
+.win95-page tbody tr:hover td {
+  background: var(--win-blue);
+  color: var(--win-white);
+}
+.win95-page tbody tr:hover td .win95-btn {
+  color: var(--win-white);
+}
+
+/* ── Modal / Dialog ─────────────────────────────────── */
+.win95-overlay { 
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+.win95-dialog {
+  background: var(--win-gray);
+  border-top: 2px solid var(--win-white);
+  border-left: 2px solid var(--win-white);
+  border-right: 2px solid var(--win-dark);
+  border-bottom: 2px solid var(--win-dark);
+  width: 440px;
+  max-width: 90vw;
+}
+.win95-dialog-body {
+  padding: 20px;
+}
+.win95-dialog-footer {
+  padding: 10px 20px 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+/* ── Badges ─────────────────────────────────────────── */
+.win95-badge {
+  display: inline-block;
+  padding: 0px 4px;
+  font-family: var(--win-font);
+  font-size: 16px;
+  border-top: 1px solid var(--win-dark);
+  border-left: 1px solid var(--win-dark);
+  border-right: 1px solid var(--win-white);
+  border-bottom: 1px solid var(--win-white);
+  background: var(--win-white);
+}
+
+/* ── Stat Cards ─────────────────────────────────────── */
+.win95-stat {
+  border-top: 2px solid var(--win-white);
+  border-left: 2px solid var(--win-white);
+  border-right: 2px solid var(--win-dark);
+  border-bottom: 2px solid var(--win-dark);
+  background: var(--win-gray);
+  padding: 8px 12px;
+  text-align: center;
+}
+.win95-stat-value {
+  font-size: 32px;
+  font-weight: bold;
+  color: var(--win-blue);
+}
+.win95-stat-label {
+  font-size: 16px;
+  color: var(--win-black);
+}
+
+/* ── Taskbar ────────────────────────────────────────── */
+.win95-taskbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: var(--win-gray);
+  border-top: 2px solid var(--win-white);
+  display: flex;
+  align-items: center;
+  padding: 2px 4px;
+  gap: 4px;
+  z-index: 998;
+}
+.win95-start-btn {
+  background: var(--win-gray);
+  border-top: 2px solid var(--win-white);
+  border-left: 2px solid var(--win-white);
+  border-right: 2px solid var(--win-dark);
+  border-bottom: 2px solid var(--win-dark);
+  padding: 3px 12px;
+  font-family: var(--win-font);
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--win-black);
+}
+.win95-start-btn:active {
+  border-top: 2px solid var(--win-dark);
+  border-left: 2px solid var(--win-dark);
+  border-right: 2px solid var(--win-white);
+  border-bottom: 2px solid var(--win-white);
+}
+.win95-taskbar-items {
+  flex: 1;
+  display: flex;
+  gap: 3px;
+  overflow: hidden;
+}
+.win95-taskbar-item {
+  border-top: 2px solid var(--win-dark);
+  border-left: 2px solid var(--win-dark);
+  border-right: 2px solid var(--win-white);
+  border-bottom: 2px solid var(--win-white);
+  background: var(--win-gray);
+  padding: 3px 12px;
+  font-family: var(--win-font);
+  font-size: 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-weight: bold;
+  color: var(--win-black);
+}
+.win95-taskbar-clock {
+  border-top: 1px solid var(--win-dark);
+  border-left: 1px solid var(--win-dark);
+  border-right: 1px solid var(--win-white);
+  border-bottom: 1px solid var(--win-white);
+  padding: 3px 10px;
+  font-size: 16px;
+  min-width: 50px;
+  text-align: center;
+}
+.win95-account-btn {
+  border-top: 1px solid var(--win-dark);
+  border-left: 1px solid var(--win-dark);
+  border-right: 1px solid var(--win-white);
+  border-bottom: 1px solid var(--win-white);
+  padding: 2px 10px;
+  font-size: 18px;
+  background: var(--win-gray);
+  cursor: pointer;
+  font-family: var(--win-font);
+  color: var(--win-black);
+  position: relative;
+}
+.win95-account-btn:hover {
+  background: #f2c522;
+}
+
+/* ── Scrollbar override ─────────────────────────────── */
+.win95-page ::-webkit-scrollbar { width: 16px; }
+.win95-page ::-webkit-scrollbar-track {
+  background: var(--win-gray);
+  border-left: 1px solid var(--win-dark);
+}
+.win95-page ::-webkit-scrollbar-thumb {
+  background: var(--win-gray);
+  border-top: 2px solid var(--win-white);
+  border-left: 2px solid var(--win-white);
+  border-right: 2px solid var(--win-dark);
+  border-bottom: 2px solid var(--win-dark);
+}
+
+/* ── Forms layout helpers ───────────────────────────── */
+.win95-form-row {
+  margin-bottom: 8px;
+}
+.win95-form-label {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 2px;
+  display: block;
+}
+
+/* ── Start Sidebar (full-height sliding panel) ──────── */
+.win95-start-sidebar-panel {
+  position: fixed;
+  top: 0;
+  left: -240px;
+  width: 240px;
+  bottom: 40px;
+  background: var(--win-gray);
+  border-right: 2px solid var(--win-dark);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  transition: left 0.3s ease;
+}
+.win95-start-sidebar-panel.open {
+  left: 0;
+}
+.win95-start-brand {
+  background: var(--win-blue);
+  color: var(--win-white);
+  padding: 16px 12px;
+  font-size: 22px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  border-bottom: 2px solid var(--win-darker);
+}
+.win95-start-nav {
+  flex: 1;
+  padding: 4px 0;
+  overflow-y: auto;
+}
+.win95-start-item {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  font-family: var(--win-font);
+  font-size: 20px;
+  color: var(--win-black);
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: none;
+}
+.win95-start-item:hover {
+  background: #f2c522;
+  color: var(--win-black);
+}
+.win95-shutdown-btn {
+  position: relative;
+}
+.win95-shutdown-btn:hover {
+  background: #cc0000 !important;
+  color: var(--win-white) !important;
+}
+.win95-shutdown-btn::after {
+  content: 'This means Log Out!';
+  position: absolute;
+  left: 105%;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #ffffcc;
+  color: var(--win-black);
+  border: 1px solid var(--win-black);
+  padding: 3px 8px;
+  font-size: 14px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 1001;
+}
+.win95-shutdown-btn:hover::after {
+  opacity: 1;
+}
+.win95-start-divider {
+  height: 1px;
+  background: var(--win-dark);
+  margin: 4px 8px;
+  border-bottom: 1px solid var(--win-white);
+}
+.win95-start-footer {
+  border-top: 2px solid var(--win-white);
+  padding: 4px 0;
+}
+
+/* ═══════════════════════════════════════════════════════
+   POS Terminal — Retro Cash Register Theme
+   ═══════════════════════════════════════════════════════ */
+
+/* Layout: two-panel split */
+.pos95-layout {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+.pos95-left { flex: 3; min-height: 0; display: flex; }
+.pos95-right { flex: 2; min-width: 320px; min-height: 0; display: flex; }
+
+/* ── Product Grid Area ── */
+.pos95-grid-area {
+  flex: 1;
+  overflow: auto;
+  padding: 6px;
+  background: var(--win-white);
+  min-height: 0;
+  /* CRT scanline effect */
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent, transparent 3px,
+    rgba(0,0,0,0.03) 3px, rgba(0,0,0,0.03) 4px
+  );
+}
+
+.pos95-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 6px;
+}
+
+/* Product Tiles */
+.pos95-product-tile {
+  background: var(--win-gray);
+  border-top: 2px solid var(--win-white);
+  border-left: 2px solid var(--win-white);
+  border-right: 2px solid var(--win-dark);
+  border-bottom: 2px solid var(--win-dark);
+  padding: 10px 8px;
+  cursor: pointer;
+  text-align: center;
+  font-family: var(--win-font);
+  transition: transform 0.1s;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pos95-product-tile:hover {
+  background: #d4d4d4;
+  transform: scale(1.03);
+}
+.pos95-product-tile:active {
+  border-top: 2px solid var(--win-dark);
+  border-left: 2px solid var(--win-dark);
+  border-right: 2px solid var(--win-white);
+  border-bottom: 2px solid var(--win-white);
+  transform: scale(0.97);
+}
+
+/* Scan button scale animation */
+.pos95-scan-btn {
+  transition: transform 0.1s;
+}
+.pos95-scan-btn:hover {
+  transform: scale(1.05);
+}
+.pos95-scan-btn:active {
+  transform: scale(0.95);
+}
+.pos95-tile-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--win-black);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pos95-tile-sku {
+  font-size: 12px;
+  color: var(--win-dark);
+}
+.pos95-tile-price {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--win-blue);
+  margin-top: 2px;
+}
+
+/* ── LED Total Display (Cash Register Style) ── */
+.pos95-led-display {
+  background: #0a0a0a;
+  border-top: 2px solid var(--win-dark);
+  border-left: 2px solid var(--win-dark);
+  border-right: 2px solid var(--win-white);
+  border-bottom: 2px solid var(--win-white);
+  margin: 8px;
+  padding: 10px 14px;
+  text-align: right;
+  font-family: 'VT323', 'Courier New', monospace;
+}
+.pos95-led-label {
+  font-size: 12px;
+  color: #00cc66;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+.pos95-led-value {
+  font-size: 36px;
+  color: #00ff66;
+  text-shadow: 0 0 8px rgba(0, 255, 102, 0.5);
+  letter-spacing: 2px;
+  line-height: 1.1;
+}
+.pos95-led-items {
+  font-size: 14px;
+  color: #00cc66;
+  opacity: 0.6;
+  margin-top: 2px;
+}
+
+/* ── Cart Items ── */
+.pos95-cart-items {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 8px;
+  min-height: 0;
+}
+.pos95-cart-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-bottom: 1px solid var(--win-dark);
+}
+.pos95-cart-row:last-child { border-bottom: none; }
+.pos95-cart-info { flex: 1; min-width: 0; }
+.pos95-cart-name {
+  font-size: 16px;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pos95-cart-sku { font-size: 12px; color: var(--win-dark); }
+.pos95-cart-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.pos95-cart-qty {
+  width: 24px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 18px;
+}
+.pos95-cart-subtotal {
+  font-weight: bold;
+  font-size: 16px;
+  min-width: 80px;
+  text-align: right;
+  color: var(--win-blue);
+}
+
+/* ── Checkout Footer ── */
+.pos95-checkout {
+  padding: 8px;
+  border-top: 2px solid var(--win-dark);
+  background: var(--win-gray);
+}
+
+/* Big Charge Button */
+.pos95-charge-btn {
+  width: 100%;
+  padding: 10px;
+  font-family: var(--win-font);
+  font-size: 22px;
+  font-weight: bold;
+  color: #fff;
+  background: #000080;
+  border-top: 2px solid #4040c0;
+  border-left: 2px solid #4040c0;
+  border-right: 2px solid #000040;
+  border-bottom: 2px solid #000040;
+  cursor: pointer;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.pos95-charge-btn:hover {
+  background: #0000a0;
+}
+.pos95-charge-btn:active {
+  border-top: 2px solid #000040;
+  border-left: 2px solid #000040;
+  border-right: 2px solid #4040c0;
+  border-bottom: 2px solid #4040c0;
+}
+.pos95-charge-btn:disabled {
+  background: var(--win-dark);
+  color: var(--win-gray);
+  cursor: not-allowed;
+  border-color: var(--win-dark);
+}
+
+/* Receipt bar */
+.pos95-receipt-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+  padding: 4px 6px;
+  background: #ffffcc;
+  border: 1px solid var(--win-darker);
+  font-size: 14px;
+}
+
+/* Keyboard shortcuts hint bar */
+.pos95-shortcuts {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--win-dark);
+  letter-spacing: 0.5px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Forms & Dialog Footers (Login/Register/Onboarding)
+   ═══════════════════════════════════════════════════════ */
+.win95-form-row {
+  margin-bottom: 10px;
+}
+.win95-form-label {
+  display: block;
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 3px;
+}
+.win95-dialog-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 2px solid var(--win-dark);
+  background: var(--win-gray);
+}
+
+/* Full-page Win95 layout (for standalone pages like Login, Landing) */
+.win95-page {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--win-font);
+  font-size: 18px;
+  background: var(--win-teal);
+  overflow: hidden;
+}
+.win95-page .win95-desktop {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+/* ── Modal Overlay & Dialog (confirmation dialogs) ─── */
+.win95-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.win95-dialog {
+  background: var(--win-gray);
+  border-top: 2px solid var(--win-white);
+  border-left: 2px solid var(--win-white);
+  border-right: 2px solid var(--win-dark);
+  border-bottom: 2px solid var(--win-dark);
+  min-width: 420px;
+  max-width: 520px;
+  font-family: var(--win-font);
+  font-size: 18px;
+}
