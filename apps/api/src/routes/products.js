@@ -137,6 +137,8 @@ router.delete('/:id', requireRole('admin'), async (req, res, next) => {
     });
     if (!existing) return res.status(404).json({ error: 'Product not found' });
 
+    // Delete inventory records first (FK constraint), then product
+    await prisma.inventory.deleteMany({ where: { productId: req.params.id } });
     await prisma.product.delete({ where: { id: req.params.id } });
     await invalidateProduct(req.user.tenantId, existing.sku);
 
