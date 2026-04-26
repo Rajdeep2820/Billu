@@ -10,7 +10,7 @@ router.use(authMiddleware);
 // POST /api/sales  — create a transaction (POS checkout)
 router.post('/', async (req, res, next) => {
   try {
-    const { lineItems, paymentMethod, idempotencyKey } = req.body;
+    const { lineItems, paymentMethod, idempotencyKey, origin } = req.body;
     const { tenantId, outletId, id: cashierId } = req.user;
 
     if (!lineItems || !lineItems.length) {
@@ -90,7 +90,7 @@ router.post('/', async (req, res, next) => {
     // Queue receipt generation
     await receiptWorker.receiptQueue.add(
       'generate-receipt',
-      { transactionId: transaction.id, tenantId, outletId },
+      { transactionId: transaction.id, tenantId, outletId, origin },
       { attempts: 3, backoff: { type: 'exponential', delay: 2000 } }
     );
 
