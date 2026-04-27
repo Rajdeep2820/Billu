@@ -68,7 +68,7 @@ router.post('/google', async (req, res, next) => {
     const client = new OAuth2Client(clientId);
     const ticket = await client.verifyIdToken({ idToken: credential, audience: clientId });
     const payload = ticket.getPayload();
-    const { email, name, sub: googleId } = payload;
+    const { email, name, picture, sub: googleId } = payload;
 
     // Check if user exists
     let user = await prisma.user.findFirst({ where: { email } });
@@ -81,10 +81,11 @@ router.post('/google', async (req, res, next) => {
         outletId: user.outletId,
         role: user.role,
         name: user.name,
+        picture,
       });
       return res.json({
         token,
-        user: { id: user.id, name: user.name, role: user.role, tenantId: user.tenantId, outletId: user.outletId },
+        user: { id: user.id, name: user.name, role: user.role, tenantId: user.tenantId, outletId: user.outletId, picture },
         isNewUser: false,
       });
     }
@@ -117,11 +118,12 @@ router.post('/google', async (req, res, next) => {
       outletId: result.outlet.id,
       role: 'admin',
       name: result.user.name,
+      picture,
     });
 
     res.status(201).json({
       token,
-      user: { id: result.user.id, name: result.user.name, role: 'admin', tenantId: result.tenant.id, outletId: result.outlet.id },
+      user: { id: result.user.id, name: result.user.name, role: 'admin', tenantId: result.tenant.id, outletId: result.outlet.id, picture },
       tenant: { id: result.tenant.id, name: result.tenant.name },
       isNewUser: true,
     });
