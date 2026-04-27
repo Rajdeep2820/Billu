@@ -10,6 +10,7 @@ export function Win95Shell({ children, activeWindow }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [clock, setClock] = useState('');
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     const tick = () => {
@@ -22,18 +23,29 @@ export function Win95Shell({ children, activeWindow }) {
   }, []);
 
   const navItems = [
-    { label: '📊 Dashboard', path: '/dashboard' },
-    { label: '📦 Products', path: '/products' },
-    { label: '🛒 POS Terminal', path: '/pos' },
-    { label: '📋 Inventory', path: '/inventory' },
-    { label: '📁 Import CSV', path: '/import' },
+    { icon: '📊', label: 'Dashboard', path: '/dashboard' },
+    { icon: '📦', label: 'Products', path: '/products' },
+    { icon: '🛒', label: 'POS Terminal', path: '/pos' },
+    { icon: '📋', label: 'Inventory', path: '/inventory' },
+    { icon: '📁', label: 'Import CSV', path: '/import' },
   ];
 
   return (
     <div className="win95-page">
-      {/* Sliding Sidebar */}
-      <div className="win95-start-sidebar-panel open">
-        <div className="win95-start-brand">⊞ Billu95</div>
+      {/* Sliding/Collapsible Sidebar */}
+      <div className={`win95-start-sidebar-panel open ${isCollapsed ? 'collapsed' : ''}`}>
+        
+        <div className="win95-start-brand" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          {!isCollapsed && <span>⊞ Billu95</span>}
+          <button 
+            className="win95-btn" 
+            style={{ minWidth: !isCollapsed ? '30px' : '100%', padding: '2px 4px', fontSize: '12px' }}
+            onClick={() => setIsCollapsed(!isCollapsed)}
+          >
+            {isCollapsed ? '→' : '←'}
+          </button>
+        </div>
+
         <div className="win95-start-nav">
           {navItems.map(item => (
             <button
@@ -41,8 +53,10 @@ export function Win95Shell({ children, activeWindow }) {
               className="win95-start-item"
               style={location.pathname === item.path ? {background:'#000080',color:'#fff'} : {}}
               onClick={() => { navigate(item.path); }}
+              title={isCollapsed ? item.label : ''}
             >
-              {item.label}
+              <span className="nav-icon">{item.icon}</span>
+              {!isCollapsed && <span className="nav-text" style={{marginLeft: 8}}>{item.label}</span>}
             </button>
           ))}
         </div>
@@ -50,16 +64,17 @@ export function Win95Shell({ children, activeWindow }) {
           <div className="win95-start-divider" />
           <button
             className="win95-start-item win95-shutdown-btn"
-            title="This means Log Out"
+            title="Log Out"
             onClick={() => { logout(); }}
           >
-            🔌 Shut Down...
+            <span className="nav-icon">🔌</span>
+            {!isCollapsed && <span style={{marginLeft: 8}}>Shut Down...</span>}
           </button>
         </div>
       </div>
 
       {/* Desktop */}
-      <div className="win95-desktop sidebar-open">
+      <div className={`win95-desktop sidebar-open ${isCollapsed ? 'sidebar-collapsed' : ''}`}>
         {children}
       </div>
 
@@ -82,8 +97,13 @@ export function Win95Shell({ children, activeWindow }) {
           className="win95-account-btn"
           title={user?.name || user?.email || 'Account'}
           onClick={() => navigate('/settings')}
+          style={{ padding: user?.picture ? '2px' : undefined, overflow: 'hidden' }}
         >
-          👤
+          {user?.picture ? (
+            <img src={user.picture} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            '👤'
+          )}
         </button>
         <div className="win95-taskbar-clock">{clock}</div>
       </div>

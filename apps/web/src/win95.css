@@ -54,6 +54,9 @@
 .win95-desktop.sidebar-open {
   margin-left: 240px;
 }
+.win95-desktop.sidebar-open.sidebar-collapsed {
+  margin-left: 60px;
+}
 
 /* ── Window ─────────────────────────────────────────── */
 .win95-window {
@@ -513,10 +516,13 @@
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  transition: left 0.3s ease;
+  transition: left 0.3s ease, width 0.3s ease;
 }
 .win95-start-sidebar-panel.open {
   left: 0;
+}
+.win95-start-sidebar-panel.collapsed {
+  width: 60px;
 }
 .win95-start-brand {
   background: var(--win-blue);
@@ -533,7 +539,8 @@
   overflow-y: auto;
 }
 .win95-start-item {
-  display: block;
+  display: flex;
+  align-items: center;
   width: 100%;
   padding: 8px 14px;
   font-family: var(--win-font);
@@ -548,6 +555,18 @@
 .win95-start-item:hover {
   background: #f2c522;
   color: var(--win-black);
+}
+.win95-start-sidebar-panel.collapsed .win95-start-item {
+  padding: 8px 0;
+  justify-content: center;
+}
+.win95-start-sidebar-panel.collapsed .nav-icon {
+  margin: 0 !important;
+  font-size: 24px;
+}
+.win95-start-sidebar-panel.collapsed .win95-start-brand {
+  padding: 16px 4px;
+  justify-content: center !important;
 }
 .win95-shutdown-btn {
   position: relative;
