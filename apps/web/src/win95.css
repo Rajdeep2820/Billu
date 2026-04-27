@@ -71,6 +71,28 @@
   flex-direction: column;
   max-height: 100%;
   overflow: hidden;
+  position: relative;
+}
+
+/* ── Decorative Toast ── */
+.win95-toast {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ffffcc;
+  border: 2px solid var(--win-dark);
+  padding: 8px 16px;
+  font-family: var(--win-font);
+  font-size: 16px;
+  color: var(--win-black);
+  z-index: 9999;
+  box-shadow: 2px 2px 0px rgba(0,0,0,0.5);
+  animation: win95-toast-slide 0.2s ease-out;
+}
+@keyframes win95-toast-slide {
+  from { bottom: -30px; opacity: 0; }
+  to { bottom: 30px; opacity: 1; }
 }
 
 /* Title Bar */
