@@ -97,10 +97,14 @@ export function Win95Shell({ children, activeWindow }) {
           className="win95-account-btn"
           title={user?.name || user?.email || 'Account'}
           onClick={() => navigate('/settings')}
-          style={{ padding: user?.picture ? '2px' : undefined, overflow: 'hidden' }}
+          style={{ padding: user?.picture ? '2px 4px' : undefined, overflow: 'hidden' }}
         >
           {user?.picture ? (
-            <img src={user.picture} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img 
+              src={user.picture} 
+              alt="Profile" 
+              style={{ width: '22px', height: '22px', objectFit: 'cover', display: 'block' }} 
+            />
           ) : (
             '👤'
           )}
@@ -143,20 +147,30 @@ export function Sidebar() {
 
 /* ── Win95 Window Component (reusable) ── */
 export function Win95Window({ icon, title, menuItems, statusPanels, children }) {
+  const [toast, setToast] = useState('');
+
+  const handleMenuClick = (item) => {
+    if (item.onClick) item.onClick();
+    else {
+      setToast('The feature is only for UI enhancement.');
+      // Auto-hide after 2.5s
+      setTimeout(() => setToast(''), 2500);
+    }
+  };
   return (
     <div className="win95-window">
       <div className="win95-titlebar">
         <div className="win95-titlebar-text">{icon} {title}</div>
         <div className="win95-titlebar-controls">
-          <button className="win95-titlebar-btn win95-btn-minimize">_</button>
-          <button className="win95-titlebar-btn win95-btn-maximize">□</button>
-          <button className="win95-titlebar-btn win95-btn-close">✕</button>
+          <button className="win95-titlebar-btn win95-btn-minimize" onClick={() => handleMenuClick({})}>_</button>
+          <button className="win95-titlebar-btn win95-btn-maximize" onClick={() => handleMenuClick({})}>□</button>
+          <button className="win95-titlebar-btn win95-btn-close" onClick={() => handleMenuClick({})}>✕</button>
         </div>
       </div>
       {menuItems && (
         <div className="win95-menubar">
           {menuItems.map((item, i) => (
-            <button key={i} className={`win95-menubar-item ${item.active ? 'active' : ''}`} onClick={item.onClick}>
+            <button key={i} className={`win95-menubar-item ${item.active ? 'active' : ''}`} onClick={() => handleMenuClick(item)}>
               {item.label}
             </button>
           ))}
@@ -170,6 +184,13 @@ export function Win95Window({ icon, title, menuItems, statusPanels, children }) 
           {statusPanels.map((panel, i) => (
             <div key={i} className="win95-status-panel">{panel}</div>
           ))}
+        </div>
+      )}
+
+      {/* Decorative Toast */}
+      {toast && (
+        <div className="win95-toast">
+          {toast}
         </div>
       )}
     </div>
