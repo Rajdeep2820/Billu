@@ -11,6 +11,13 @@ export function Win95Shell({ children, activeWindow }) {
   const location = useLocation();
   const [clock, setClock] = useState('');
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark');
+
+  useEffect(() => {
+    if (isDark) document.body.classList.add('dark-theme');
+    else document.body.classList.remove('dark-theme');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  }, [isDark]);
 
   useEffect(() => {
     const tick = () => {
@@ -62,6 +69,14 @@ export function Win95Shell({ children, activeWindow }) {
         </div>
         <div className="win95-start-footer">
           <div className="win95-start-divider" />
+          <button
+            className="win95-start-item"
+            title="Toggle Theme"
+            onClick={() => setIsDark(!isDark)}
+          >
+            <span className="nav-icon">{isDark ? '☀️' : '🌙'}</span>
+            {!isCollapsed && <span style={{marginLeft: 8}}>{isDark ? 'Light Theme' : 'Dark Theme'}</span>}
+          </button>
           <button
             className="win95-start-item win95-shutdown-btn"
             title="Log Out"
