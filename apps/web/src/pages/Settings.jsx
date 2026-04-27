@@ -127,8 +127,8 @@ export default function Settings() {
 
         {/* ── Account Info (read-only) ── */}
         <div className="win95-section-header">► Account Information</div>
-        <div className="win95-raised" style={{padding:12,marginBottom:10}}>
-          <div style={{display:'grid',gridTemplateColumns:'140px 1fr',gap:6,fontSize:18}}>
+        <div className="win95-raised" style={{padding:12,marginBottom:10, display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
+          <div style={{display:'grid',gridTemplateColumns:'140px 1fr',gap:6,fontSize:18, flex: 1}}>
             <span style={{fontWeight:'bold',color:'var(--win-dark)'}}>Email:</span>
             <span>{profile?.email}</span>
             <span style={{fontWeight:'bold',color:'var(--win-dark)'}}>Role:</span>
@@ -140,6 +140,23 @@ export default function Settings() {
             <span style={{fontWeight:'bold',color:'var(--win-dark)'}}>Outlet:</span>
             <span>{profile?.outlet?.name || '—'} {profile?.outlet?.city ? `(${profile.outlet.city})` : ''}</span>
           </div>
+          {user?.picture && (
+            <div style={{
+              width: '110px', 
+              height: '110px', 
+              borderTop: '2px solid var(--win-dark)', 
+              borderLeft: '2px solid var(--win-dark)', 
+              borderRight: '2px solid var(--win-white)', 
+              borderBottom: '2px solid var(--win-white)',
+              marginLeft: '20px', 
+              marginRight: '10px',
+              backgroundColor: 'var(--win-gray)', 
+              padding: '4px',
+              flexShrink: 0
+            }}>
+              <img src={user.picture} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} alt="Profile" />
+            </div>
+          )}
         </div>
 
         {/* ── Editable Profile ── */}
