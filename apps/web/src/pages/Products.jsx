@@ -9,7 +9,6 @@ export function Win95Shell({ children, activeWindow }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [showStart, setShowStart] = useState(true);
   const [clock, setClock] = useState('');
 
   useEffect(() => {
@@ -33,7 +32,7 @@ export function Win95Shell({ children, activeWindow }) {
   return (
     <div className="win95-page">
       {/* Sliding Sidebar */}
-      <div className={`win95-start-sidebar-panel ${showStart ? 'open' : ''}`}>
+      <div className="win95-start-sidebar-panel open">
         <div className="win95-start-brand">⊞ Billu95</div>
         <div className="win95-start-nav">
           {navItems.map(item => (
@@ -41,7 +40,7 @@ export function Win95Shell({ children, activeWindow }) {
               key={item.path}
               className="win95-start-item"
               style={location.pathname === item.path ? {background:'#000080',color:'#fff'} : {}}
-              onClick={() => { navigate(item.path); setShowStart(false); }}
+              onClick={() => { navigate(item.path); }}
             >
               {item.label}
             </button>
@@ -52,7 +51,7 @@ export function Win95Shell({ children, activeWindow }) {
           <button
             className="win95-start-item win95-shutdown-btn"
             title="This means Log Out"
-            onClick={() => { logout(); setShowStart(false); }}
+            onClick={() => { logout(); }}
           >
             🔌 Shut Down...
           </button>
@@ -60,13 +59,13 @@ export function Win95Shell({ children, activeWindow }) {
       </div>
 
       {/* Desktop */}
-      <div className={`win95-desktop ${showStart ? 'sidebar-open' : ''}`} onClick={() => setShowStart(false)}>
+      <div className="win95-desktop sidebar-open">
         {children}
       </div>
 
       {/* Taskbar */}
       <div className="win95-taskbar">
-        <button className="win95-start-btn" onClick={() => setShowStart(v => !v)}>
+        <button className="win95-start-btn win95-btn-toggled">
           ⊞ Start
         </button>
         <div className="win95-taskbar-items">
