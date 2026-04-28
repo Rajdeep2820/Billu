@@ -1,0 +1,12 @@
+
+Item_Code,Product Name,Category,Brand,MRP,Selling_Price,Stock_Qty,Batch_No,Expiry_Date,Manufacture_Date,GST_Percent,Location,Notes
+MED001,Paracetamol 500mg Tablets,Analgesic,Cipla,30,25,120,BT12345,2027-06-30,2024-07-01,12,Shelf A1,Fever and pain relief
+MED002,Amoxicillin 250mg Capsules,Antibiotic,Sun Pharma,120,110,60,BT22341,2026-12-31,2024-01-15,12,Shelf B2,Prescription required
+MED003,Cough Syrup 100ml,Cough & Cold,Dr Reddy's,95,90,45,BT99812,2025-11-30,2023-12-01,12,Shelf C1,Shake well before use
+MED004,Vitamin D3 60K IU,Supplements,Abbott,75,70,200,BT55678,2028-03-31,2025-01-10,5,Shelf D3,Weekly dosage
+MED005,Insulin Injection 10ml,Diabetes,Novo Nordisk,850,820,25,BT33221,2025-08-15,2024-02-20,5,Refrigerator,Keep refrigerated
+MED006,ORS Powder Sachet,Hydration,Dabur,20,18,300,BT77889,2027-01-31,2024-05-10,5,Shelf E2,For dehydration
+MED007,Antiseptic Liquid 500ml,First Aid,Dettol,180,170,75,BT99112,2026-09-30,2024-03-12,18,Shelf F1,External use only
+MED008,Blood Pressure Monitor,Devices,Omron,2500,2400,15,BT44119,2030-12-31,2025-02-01,18,Shelf G1,Digital device
+MED009,Calcium Tablets,Supplements,Himalaya,150,140,90,BT77234,2027-05-31,2024-06-15,5,Shelf D2,Bone health
+MED010,Hand Sanitizer 200ml,Hygiene,Lifebuoy,85,80,130,BT66543,2026-04-30,2024-04-01,18,Shelf F3,Alcohol-based
