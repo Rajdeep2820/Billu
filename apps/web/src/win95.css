@@ -18,6 +18,19 @@
   --win-font: 'VT323', 'Courier New', monospace;
 }
 
+body.dark-theme {
+  --win-bg: #0a0a0a;
+  --win-gray: #1e1e1e;
+  --win-dark: #000000;
+  --win-darker: #000000;
+  --win-white: #4a4a4a;
+  --win-black: #e0e0e0;
+  --win-blue: #000060;
+  --win-title-text: #ffffff;
+  --win-border-light: #4a4a4a;
+  --win-border-dark: #000000;
+}
+
 /* ── Reset for Win95 pages ──────────────────────────── */
 .win95-page {
   font-family: var(--win-font);
@@ -346,6 +359,9 @@
 }
 .win95-page tbody tr:nth-child(even) td {
   background: #f0f0f0;
+}
+body.dark-theme .win95-page tbody tr:nth-child(even) td {
+  background: #3a3a3a;
 }
 .win95-page tbody tr:hover td {
   background: var(--win-blue);
