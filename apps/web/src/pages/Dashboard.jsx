@@ -76,7 +76,7 @@ export default function Dashboard() {
             <div className="win95-stat-label">Transactions Today</div>
           </div>
           <div className="win95-stat">
-            <div className="win95-stat-value" style={{color: liveSalesCount > 0 ? '#008000' : undefined}}>
+            <div className="win95-stat-value">
               {liveSalesCount}
             </div>
             <div className="win95-stat-label">Live Sales (Session)</div>
