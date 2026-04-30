@@ -129,15 +129,15 @@ export default function Settings() {
         <div className="win95-section-header">► Account Information</div>
         <div className="win95-raised" style={{padding:12,marginBottom:10, display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
           <div style={{display:'grid',gridTemplateColumns:'140px 1fr',gap:6,fontSize:18, flex: 1}}>
-            <span style={{fontWeight:'bold',color:'var(--win-dark)'}}>Email:</span>
+            <span style={{fontWeight:'bold'}}>Email:</span>
             <span>{profile?.email}</span>
-            <span style={{fontWeight:'bold',color:'var(--win-dark)'}}>Role:</span>
+            <span style={{fontWeight:'bold'}}>Role:</span>
             <span style={{textTransform:'capitalize'}}>{profile?.role}</span>
-            <span style={{fontWeight:'bold',color:'var(--win-dark)'}}>Member Since:</span>
+            <span style={{fontWeight:'bold'}}>Member Since:</span>
             <span>{profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-IN') : '—'}</span>
-            <span style={{fontWeight:'bold',color:'var(--win-dark)'}}>Login Method:</span>
+            <span style={{fontWeight:'bold'}}>Login Method:</span>
             <span>{profile?.isGoogleUser ? '🔵 Google Account' : '🔑 Password'}</span>
-            <span style={{fontWeight:'bold',color:'var(--win-dark)'}}>Outlet:</span>
+            <span style={{fontWeight:'bold'}}>Outlet:</span>
             <span>{profile?.outlet?.name || '—'} {profile?.outlet?.city ? `(${profile.outlet.city})` : ''}</span>
           </div>
           {user?.picture && (
