@@ -442,7 +442,7 @@ router.get('/:transactionId', async (req, res) => {
 
     <!-- Header -->
     <div class="header">
-      <div class="store-name">BiLLIt</div>
+      <div class="store-name">${tx.tenant.name}</div>
       <div class="store-location">${tx.outlet.name}${tx.outlet.city ? ' · ' + tx.outlet.city : ''}</div>
     </div>
 
