@@ -33,6 +33,7 @@ router.get('/:transactionId', async (req, res) => {
     const gpayLink = `gpay://upi/pay?${upiParams}`;
     const phonepeLink = `phonepe://pay?${upiParams}`;
     const paytmLink = `paytmmp://pay?${upiParams}`;
+    const mobikwikLink = `mobikwik://upi/pay?${upiParams}`;
     const genericUpi = `upi://pay?${upiParams}`;
 
     // Parse line items
