@@ -7,7 +7,12 @@ const { uploadReceipt } = require('../services/s3');
 let receiptQueue;
 
 function initQueues(io) {
-  receiptQueue = new Bull('receipts', process.env.REDIS_URL);
+  // Fix for Upstash (rediss://) requiring explicit TLS config in Bull
+  const bullOptions = process.env.REDIS_URL.startsWith('rediss://') 
+    ? { redis: { tls: { rejectUnauthorized: false } } } 
+    : {};
+    
+  receiptQueue = new Bull('receipts', process.env.REDIS_URL, bullOptions);
 
   receiptQueue.process('generate-receipt', 3, async (job) => {
     const { transactionId, tenantId, outletId, origin } = job.data;
