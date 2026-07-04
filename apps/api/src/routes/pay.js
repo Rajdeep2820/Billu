@@ -332,7 +332,7 @@ router.get('/:transactionId', async (req, res) => {
     }
 
     .upi-btn .upi-icon {
-      height: 36px;
+      height: 60px;
       max-width: 100%;
       object-fit: contain;
       margin-bottom: 4px;
@@ -463,7 +463,7 @@ router.get('/:transactionId', async (req, res) => {
             PhonePe
           </a>
           <a href="${paytmLink}" class="upi-btn">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/c/cb/Paytm_logo_new.svg" class="upi-icon" alt="Paytm" >
+            <img src="https://images.seeklogo.com/logo-png/50/1/paytm-logo-png_seeklogo-501241.png" class="upi-icon" alt="Paytm">
             Paytm
           </a>
           <a href="${mobikwikLink}" class="upi-btn">
