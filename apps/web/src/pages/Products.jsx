@@ -95,7 +95,7 @@ export function Win95Shell({ children, activeWindow }) {
 
       {/* Taskbar */}
       <div className="win95-taskbar">
-        <button className="win95-start-btn win95-btn-toggled">
+        <button className="win95-start-btn win95-btn-toggled rainbow-bg">
           ⊞ Start
         </button>
         <div className="win95-taskbar-items">

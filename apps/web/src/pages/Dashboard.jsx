@@ -14,7 +14,13 @@ export default function Dashboard() {
     api.get('/dashboard/summary').then(res => setSummary(res.data));
     api.get('/dashboard/top-products').then(res => setTopProducts(res.data));
 
-    const socket = io('http://localhost:4000', { auth: { token } });
+    // Connect to WebSockets using VITE_API_URL
+    const backendHost = import.meta.env.VITE_API_URL 
+      ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') 
+      : (window.location.hostname === 'localhost' ? (window.location.port === '5173' ? 'http://localhost:4000' : window.location.origin) : window.location.origin);
+    
+    const socketUrl = backendHost;
+    const socket = io(socketUrl, { auth: { token }, path: '/socket.io/' });
 
     socket.on('sale:new', (sale) => {
       setLiveSalesCount(prev => prev + 1);

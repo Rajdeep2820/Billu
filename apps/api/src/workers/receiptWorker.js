@@ -28,12 +28,9 @@ function initQueues(io) {
     const s3Key = `receipts/${tenantId}/${transactionId}.pdf`;
 
     // QR points to the smart landing page (UPI pay + receipt download)
-    let apiHost = origin || process.env.API_HOST || `http://localhost`;
-    if (process.env.NODE_ENV === 'production' || process.env.DOCKER_ENV) {
-      apiHost = apiHost.replace(/:4000\/?$/, ''); // strip :4000
-    }
+    // API_HOST takes priority (public tunnel URL), fallback to origin from frontend
+    let apiHost = process.env.API_HOST || origin || `http://localhost`;
     const landingUrl = `${apiHost}/pay/${transactionId}`;
-    const s3Url = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${s3Key}`;
     const qrDataUrl = await QRCode.toDataURL(landingUrl);
     const qrBuffer = Buffer.from(qrDataUrl.split(',')[1], 'base64');
 
@@ -101,17 +98,17 @@ function initQueues(io) {
       doc.end();
     });
 
-    // Upload to S3
+    // Upload to R2
     const publicUrl = await uploadReceipt(s3Key, pdfBuffer);
-    console.log(`[S3] Uploaded receipt: ${publicUrl}`);
+    console.log(`[R2] Uploaded receipt: ${publicUrl}`);
 
-    // Update transaction with the S3 URL as receipt path
+    // Update transaction with the receipt URL
     await prisma.transaction.update({
       where: { id: transactionId },
       data: { receiptPath: publicUrl },
     });
 
-    // Notify dashboard via socket — send S3 PDF URL for vendor's "View Receipt" link
+    // Notify dashboard via socket — send receipt URL for vendor's "View Receipt" link
     if (io) {
       io.to(`tenant:${tenantId}`).emit('receipt:ready', {
         transactionId,

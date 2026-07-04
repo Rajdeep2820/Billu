@@ -19,10 +19,12 @@ export default function POS() {
   useEffect(() => {
     api.get('/products?limit=100').then(res => setProducts(res.data.products));
 
-    // Connect via Nginx proxy (works in both dev and Docker)
-    const socketUrl = window.location.hostname === 'localhost'
-      ? (window.location.port === '5173' ? 'http://localhost:4000' : window.location.origin)
-      : window.location.origin;
+    // Connect to WebSockets using VITE_API_URL (removes the /api suffix if present)
+    const backendHost = import.meta.env.VITE_API_URL 
+      ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') 
+      : (window.location.hostname === 'localhost' ? (window.location.port === '5173' ? 'http://localhost:4000' : window.location.origin) : window.location.origin);
+    
+    const socketUrl = backendHost;
     const socket = io(socketUrl, { auth: { token }, path: '/socket.io/' });
     socket.on('receipt:ready', (data) => {
       setReceiptUrl(data.receiptUrl);

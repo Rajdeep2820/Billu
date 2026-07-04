@@ -29,6 +29,7 @@ body.dark-theme {
   --win-title-text: #ffffff;
   --win-border-light: #4a4a4a;
   --win-border-dark: #000000;
+  background: #ffffcc;
 }
 
 /* ── Reset for Win95 pages ──────────────────────────── */
@@ -327,7 +328,7 @@ body.dark-theme {
 /* ── Section Headers ────────────────────────────────── */
 .win95-section-header {
   background: var(--win-blue);
-  color: var(--win-white);
+  color: #c4c4c4;
   padding: 4px 10px;
   font-size: 20px;
   font-weight: bold;
@@ -428,6 +429,9 @@ body.dark-theme .win95-page tbody tr:nth-child(even) td {
   font-weight: bold;
   color: var(--win-blue);
 }
+body.dark-theme .win95-stat-value {
+  color: #ffffcc;
+}
 .win95-stat-label {
   font-size: 16px;
   color: var(--win-black);
@@ -515,6 +519,19 @@ body.dark-theme .win95-page tbody tr:nth-child(even) td {
 }
 .win95-account-btn:hover {
   background: #f2c522;
+}
+
+/* ── Rainbow Button Background ── */
+.rainbow-bg {
+  background: linear-gradient(180deg,
+    #5EBD3E 0%, #5EBD3E 16.6%,
+    #FFB900 16.6%, #FFB900 33.3%,
+    #F78200 33.3%, #F78200 50%,
+    #E23838 50%, #E23838 66.6%,
+    #973999 66.6%, #973999 83.3%,
+    #009CDF 83.3%, #009CDF 100%
+  ) !important;
+  color: #000 !important;
 }
 
 /* ── Scrollbar override ─────────────────────────────── */
@@ -736,6 +753,9 @@ body.dark-theme .win95-page tbody tr:nth-child(even) td {
   font-weight: bold;
   color: var(--win-blue);
   margin-top: 2px;
+}
+body.dark-theme .pos95-tile-price {
+  color: #ffffcc;
 }
 
 /* ── LED Total Display (Cash Register Style) ── */
