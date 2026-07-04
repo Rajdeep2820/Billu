@@ -331,11 +331,11 @@ router.get('/:transactionId', async (req, res) => {
     }
 
     .upi-btn .upi-icon {
-      height: 24px;
+      height: 36px;
       max-width: 100%;
       object-fit: contain;
-      margin-bottom: 2px;
-      border-radius: 4px;
+      margin-bottom: 4px;
+      border-radius: 6px;
     }
 
     .upi-other {
