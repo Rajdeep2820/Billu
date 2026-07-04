@@ -331,8 +331,11 @@ router.get('/:transactionId', async (req, res) => {
     }
 
     .upi-btn .upi-icon {
-      font-size: 22px;
-      line-height: 1;
+      height: 24px;
+      max-width: 100%;
+      object-fit: contain;
+      margin-bottom: 2px;
+      border-radius: 4px;
     }
 
     .upi-other {
@@ -439,21 +442,48 @@ router.get('/:transactionId', async (req, res) => {
 
     <!-- Header -->
     <div class="header">
-      <div class="store-name">${tx.tenant.name}</div>
-      <div class="store-location">${tx.outlet.name}${tx.outlet.city ? ' · ' + tx.outlet.city : ''}</div>
+      <div class="store-name">\${tx.tenant.name}</div>
+      <div class="store-location">\${tx.outlet.name}\${tx.outlet.city ? ' · ' + tx.outlet.city : ''}</div>
     </div>
 
     <div class="divider"></div>
 
+    <!-- UPI Payment (only if pending) -->
+    \${tx.paymentMethod === 'card' ? \`
+      <div class="pay-section">
+        <div class="pay-title">Pay with UPI</div>
+        <div class="upi-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+          <a href="\${gpayLink}" class="upi-btn">
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQweNJ3RA0kUHW9BGg0dCuAAPJ0XlEtxO7WMmh9gu9PwXDrQcoocny_0pc&s=10" class="upi-icon" alt="GPay">
+            GPay
+          </a>
+          <a href="\${phonepeLink}" class="upi-btn">
+            <img src="https://images.seeklogo.com/logo-png/50/1/phonepe-logo-png_seeklogo-507202.png" class="upi-icon" alt="PhonePe">
+            PhonePe
+          </a>
+          <a href="\${paytmLink}" class="upi-btn">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/c/cb/Paytm_logo_new.svg" class="upi-icon" alt="Paytm" style="background:#fff; padding:2px; height:24px;">
+            Paytm
+          </a>
+          <a href="\${mobikwikLink}" class="upi-btn">
+            <img src="https://static-asset.inc42.com/logo/mobikwik.png" class="upi-icon" alt="MobiKwik">
+            MobiKwik
+          </a>
+        </div>
+        <a href="\${genericUpi}" class="upi-other">Other UPI App</a>
+        <div class="divider"></div>
+      </div>
+    \` : ''}
+
     <!-- Amount -->
     <div class="amount-section">
       <div class="amount-label">Total Amount</div>
-      <div class="amount"><span class="currency">₹</span>${amount}</div>
-      <div class="order-id">#${tx.id.split('-')[0].toUpperCase()}</div>
+      <div class="amount"><span class="currency">₹</span>\${amount}</div>
+      <div class="order-id">#\${tx.id.split('-')[0].toUpperCase()}</div>
 
       <div class="status">
-        <span class="status-dot ${tx.paymentMethod === 'card' ? 'pending' : 'paid'}"></span>
-        <span class="status-text">${tx.paymentMethod === 'card' ? 'Awaiting Payment' : tx.paymentMethod.toUpperCase() + ' · Paid'}</span>
+        <span class="status-dot \${tx.paymentMethod === 'card' ? 'pending' : 'paid'}"></span>
+        <span class="status-text">\${tx.paymentMethod === 'card' ? 'Awaiting Payment' : tx.paymentMethod.toUpperCase() + ' · Paid'}</span>
       </div>
     </div>
 
@@ -461,19 +491,19 @@ router.get('/:transactionId', async (req, res) => {
 
     <!-- Line Items -->
     <div class="items-header">Items</div>
-    ${lineItems.map(item => `
+    \${lineItems.map(item => \`
       <div class="item">
-        <span class="item-name">${item.name}</span>
-        <span class="item-qty">×${item.qty}</span>
-        <span class="item-price">₹${(parseFloat(item.unitPrice) * item.qty).toFixed(2)}</span>
+        <span class="item-name">\${item.name}</span>
+        <span class="item-qty">×\${item.qty}</span>
+        <span class="item-price">₹\${(parseFloat(item.unitPrice) * item.qty).toFixed(2)}</span>
       </div>
-    `).join('')}
+    \`).join('')}
 
     <div class="divider-dashed"></div>
 
     <div class="total-row">
       <span class="total-label">Total</span>
-      <span class="total-value">₹${amount}</span>
+      <span class="total-value">₹\${amount}</span>
     </div>
 
     <div class="divider"></div>
@@ -482,57 +512,34 @@ router.get('/:transactionId', async (req, res) => {
     <div class="meta-grid">
       <div class="meta-item">
         <span class="meta-label">Date</span>
-        <span class="meta-value">${formattedDate}</span>
+        <span class="meta-value">\${formattedDate}</span>
       </div>
       <div class="meta-item right">
         <span class="meta-label">Time</span>
-        <span class="meta-value">${formattedTime}</span>
+        <span class="meta-value">\${formattedTime}</span>
       </div>
       <div class="meta-item">
         <span class="meta-label">Payment</span>
-        <span class="meta-value">${tx.paymentMethod.toUpperCase()}</span>
+        <span class="meta-value">\${tx.paymentMethod.toUpperCase()}</span>
       </div>
       <div class="meta-item right">
         <span class="meta-label">Order</span>
-        <span class="meta-value">#${tx.id.split('-')[0].toUpperCase()}</span>
+        <span class="meta-value">#\${tx.id.split('-')[0].toUpperCase()}</span>
       </div>
     </div>
 
     <div class="divider"></div>
 
-    <!-- UPI Payment (only if pending) -->
-    ${tx.paymentMethod === 'card' ? `
-      <div class="pay-section">
-        <div class="pay-title">Pay with UPI</div>
-        <div class="upi-grid">
-          <a href="${gpayLink}" class="upi-btn">
-            <span class="upi-icon">G</span>
-            GPay
-          </a>
-          <a href="${phonepeLink}" class="upi-btn">
-            <span class="upi-icon">P</span>
-            PhonePe
-          </a>
-          <a href="${paytmLink}" class="upi-btn">
-            <span class="upi-icon">₽</span>
-            Paytm
-          </a>
-        </div>
-        <a href="${genericUpi}" class="upi-other">Other UPI App</a>
-        <div class="divider"></div>
-      </div>
-    ` : ''}
-
     <!-- Receipt Download -->
-    ${receiptUrl !== '#' ? `
-      <a href="${receiptUrl}" target="_blank" class="btn-receipt">
+    \${receiptUrl !== '#' ? \`
+      <a href="\${receiptUrl}" target="_blank" class="btn-receipt">
         Download Receipt
       </a>
-    ` : `
+    \` : \`
       <div class="receipt-generating">
         <span class="spinner"></span> Generating Receipt
       </div>
-    `}
+    \`}
 
     <!-- Footer -->
     <div class="footer">
@@ -543,7 +550,6 @@ router.get('/:transactionId', async (req, res) => {
   </div>
 </body>
 </html>`);
-  } catch (err) {
     console.error('[Pay Page]', err);
     res.status(500).send(`<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
