@@ -32,9 +32,10 @@ function initQueues(io) {
 
     const s3Key = `receipts/${tenantId}/${transactionId}.pdf`;
 
-    // QR points to the smart landing page (UPI pay + receipt download)
-    // API_HOST takes priority (public tunnel URL), fallback to origin from frontend
-    let apiHost = process.env.API_HOST || origin || `http://localhost`;
+    // QR points to the smart landing page on the API (UPI pay + receipt download)
+    // API_HOST must always be the public Render URL (e.g. https://billu-api.onrender.com)
+    // Never use 'origin' here because origin is the FRONTEND URL (Vercel), not the API.
+    const apiHost = process.env.API_HOST || `https://billu-api.onrender.com`;
     const landingUrl = `${apiHost}/pay/${transactionId}`;
     const qrDataUrl = await QRCode.toDataURL(landingUrl);
     const qrBuffer = Buffer.from(qrDataUrl.split(',')[1], 'base64');
