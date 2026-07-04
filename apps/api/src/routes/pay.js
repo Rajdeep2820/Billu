@@ -84,7 +84,7 @@ router.get('/:transactionId', async (req, res) => {
     }
 
     .store-name {
-      font-size: 28px;
+      font-size: 38px;
       font-weight: 800;
       letter-spacing: 2px;
       color: #fff;
@@ -454,7 +454,7 @@ router.get('/:transactionId', async (req, res) => {
         <div class="pay-title">Pay with UPI</div>
         <div class="upi-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
           <a href="${gpayLink}" class="upi-btn">
-            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQweNJ3RA0kUHW9BGg0dCuAAPJ0XlEtxO7WMmh9gu9PwXDrQcoocny_0pc&s=10" class="upi-icon" alt="GPay" style="border-radius: 12px; overflow: hidden;">
+            <img src="https://cdn-icons-png.flaticon.com/512/6124/6124998.png" class="upi-icon" alt="GPay">
             GPay
           </a>
           <a href="${phonepeLink}" class="upi-btn">
