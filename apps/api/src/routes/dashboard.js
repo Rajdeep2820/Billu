@@ -97,27 +97,27 @@ router.get('/top-products', async (req, res, next) => {
     const { tenantId } = req.user;
     const limit = parseInt(req.query.limit) || 5;
 
-    const transactions = await prisma.transaction.findMany({
+    const topItems = await prisma.transactionItem.groupBy({
+      by: ['sku', 'name'],
       where: { tenantId },
-      select: { lineItems: true },
+      _sum: {
+        qty: true,
+        totalAmount: true,
+      },
+      orderBy: {
+        _sum: {
+          totalAmount: 'desc',
+        },
+      },
+      take: limit,
     });
 
-    // Aggregate across all lineItems JSON arrays
-    const productSales = {};
-    for (const tx of transactions) {
-      for (const item of tx.lineItems) {
-        const key = item.sku;
-        if (!productSales[key]) {
-          productSales[key] = { sku: key, name: item.name, totalQty: 0, totalRevenue: 0 };
-        }
-        productSales[key].totalQty += item.qty;
-        productSales[key].totalRevenue += parseFloat(item.unitPrice) * item.qty;
-      }
-    }
-
-    const sorted = Object.values(productSales)
-      .sort((a, b) => b.totalRevenue - a.totalRevenue)
-      .slice(0, limit);
+    const sorted = topItems.map(item => ({
+      sku: item.sku,
+      name: item.name,
+      totalQty: item._sum.qty || 0,
+      totalRevenue: parseFloat(item._sum.totalAmount || 0),
+    }));
 
     res.json(sorted);
   } catch (err) {

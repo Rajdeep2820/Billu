@@ -19,7 +19,7 @@ export default function POS() {
   const searchRef = useRef(null);
 
   useEffect(() => {
-    api.get('/products?limit=100').then(res => setProducts(res.data.products));
+    api.get('/products?limit=100').then(res => setProducts(res.data.products)).catch(() => setProducts([]));
 
     // Fetch outlets for admin selector
     if (user?.role === 'admin') {

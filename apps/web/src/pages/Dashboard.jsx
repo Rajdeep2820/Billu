@@ -11,8 +11,8 @@ export default function Dashboard() {
   const [liveSalesCount, setLiveSalesCount] = useState(0);
 
   useEffect(() => {
-    api.get('/dashboard/summary').then(res => setSummary(res.data));
-    api.get('/dashboard/top-products').then(res => setTopProducts(res.data));
+    api.get('/dashboard/summary').then(res => setSummary(res.data)).catch(() => setSummary(null));
+    api.get('/dashboard/top-products').then(res => setTopProducts(res.data)).catch(() => setTopProducts([]));
 
     // Connect to WebSockets using VITE_API_URL
     const backendHost = import.meta.env.VITE_API_URL 

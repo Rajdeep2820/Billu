@@ -186,12 +186,17 @@ router.post('/', async (req, res, next) => {
       throw dbError; // re-throw to be caught by outer try-catch
     }
 
-    // Queue receipt generation
-    await receiptWorker.receiptQueue.add(
-      'generate-receipt',
-      { transactionId: transaction.id, tenantId, outletId, origin },
-      { attempts: 3, backoff: { type: 'exponential', delay: 2000 } }
-    );
+    // Queue receipt generation (wrapped in try/catch to prevent failing the checkout if Redis is down)
+    try {
+      await receiptWorker.receiptQueue.add(
+        'generate-receipt',
+        { transactionId: transaction.id, tenantId, outletId, origin },
+        { attempts: 3, backoff: { type: 'exponential', delay: 2000 } }
+      );
+    } catch (queueErr) {
+      console.error(`[Sales] Failed to enqueue receipt for ${transaction.id}:`, queueErr.message);
+      // We don't throw here; the transaction was already successful.
+    }
 
     // Emit real-time sale event to tenant dashboard
     req.io.to(`tenant:${tenantId}`).emit('sale:new', {
