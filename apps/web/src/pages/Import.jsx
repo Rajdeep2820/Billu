@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Win95Shell, Win95Window } from './Products';
 import api from '../api/client';
@@ -22,6 +22,7 @@ export default function Import() {
   const [totalRows, setTotalRows] = useState(0);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [outlets, setOutlets] = useState([]);
   const [selectedOutletId, setSelectedOutletId] = useState('');
