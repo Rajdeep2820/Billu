@@ -19,8 +19,21 @@ export default function POS() {
   const searchRef = useRef(null);
 
   useEffect(() => {
-    api.get('/products?limit=100').then(res => setProducts(res.data.products)).catch(() => setProducts([]));
+    // Fetch products based on selected outlet (or assigned outlet)
+    if (selectedOutletId || user?.outletId) {
+      const targetOutlet = selectedOutletId || user.outletId;
+      api.get(`/inventory?outletId=${targetOutlet}`).then(res => {
+        // Map inventory items back to product shapes for the grid
+        const mappedProducts = res.data.map(inv => ({
+          ...inv.product,
+          stock: inv.quantity
+        }));
+        setProducts(mappedProducts);
+      }).catch(() => setProducts([]));
+    }
+  }, [selectedOutletId, user?.outletId]);
 
+  useEffect(() => {
     // Fetch outlets for admin selector
     if (user?.role === 'admin') {
       api.get('/outlets').then(res => {
@@ -33,6 +46,7 @@ export default function POS() {
         }
       }).catch(() => {});
     }
+
 
     // Connect to WebSockets using VITE_API_URL (removes the /api suffix if present)
     const backendHost = import.meta.env.VITE_API_URL 
@@ -84,12 +98,17 @@ export default function POS() {
     e.preventDefault();
     if (!barcode.trim()) return;
     try {
-      const res = await api.get(`/products/barcode/${barcode.trim().toUpperCase()}`);
-      addToCart(res.data);
+      setLoading(true);
+      const targetOutlet = selectedOutletId || user?.outletId || '';
+      const res = await api.get(`/products/barcode/${barcode.trim().toUpperCase()}?outletId=${targetOutlet}`);
+      const product = res.data;
+      addToCart(product);
       setBarcode('');
     } catch (err) {
       alert(`Barcode ${barcode} not found!`);
       setBarcode('');
+    } finally {
+      setLoading(false);
     }
   };
 

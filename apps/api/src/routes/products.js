@@ -39,20 +39,25 @@ router.get('/', async (req, res, next) => {
 router.get('/barcode/:sku', async (req, res, next) => {
   try {
     const { sku } = req.params;
-    const { tenantId, outletId } = req.user;
+    const { outletId: queryOutletId } = req.query;
+    const { tenantId, outletId: userOutletId, role } = req.user;
 
-    // 1. Check Redis cache
-    const cached = await getProductCache(tenantId, sku);
-    if (cached) {
-      return res.json({ ...cached, fromCache: true });
+    let targetOutletId = userOutletId;
+    if ((role === 'admin' || role === 'manager') && queryOutletId) {
+      targetOutletId = queryOutletId;
     }
 
-    // 2. DB fallback
+    // 1. Check Redis cache
+    // Caching stock by tenantId:sku is flawed in multi-outlet, so we skip cache for barcode scan 
+    // or we'd need to cache by tenantId:outletId:sku. For now, we'll fetch from DB directly 
+    // to ensure stock accuracy for the specific outlet.
+
+    // 2. DB fetch
     const product = await prisma.product.findUnique({
       where: { tenantId_sku: { tenantId, sku } },
       include: {
         inventory: {
-          where: { outletId },
+          where: { outletId: targetOutletId },
           select: { quantity: true },
         },
       },
@@ -69,9 +74,6 @@ router.get('/barcode/:sku', async (req, res, next) => {
       attributes: product.attributes,
       stock: product.inventory[0]?.quantity ?? 0,
     };
-
-    // 3. Populate cache
-    await setProductCache(tenantId, sku, data);
 
     res.json({ ...data, fromCache: false });
   } catch (err) {
