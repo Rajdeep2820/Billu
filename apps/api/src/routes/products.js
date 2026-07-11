@@ -137,9 +137,17 @@ router.delete('/:id', requireRole('admin'), async (req, res, next) => {
     });
     if (!existing) return res.status(404).json({ error: 'Product not found' });
 
-    // Delete inventory records first (FK constraint), then product
-    await prisma.inventory.deleteMany({ where: { productId: req.params.id } });
-    await prisma.product.delete({ where: { id: req.params.id } });
+    // Delete child records first (FK constraints), then product
+    await prisma.$transaction(async (tx) => {
+      await tx.inventoryMovement.deleteMany({ where: { productId: req.params.id } });
+      // TransactionItem uses onDelete: SetNull, so no need to delete — just nullify
+      await tx.transactionItem.updateMany({
+        where: { productId: req.params.id },
+        data: { productId: null },
+      });
+      await tx.inventory.deleteMany({ where: { productId: req.params.id } });
+      await tx.product.delete({ where: { id: req.params.id } });
+    });
     await invalidateProduct(req.user.tenantId, existing.sku);
 
     res.json({ deleted: true });

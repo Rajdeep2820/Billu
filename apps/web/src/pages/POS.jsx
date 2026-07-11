@@ -5,7 +5,7 @@ import { io } from 'socket.io-client';
 import { Win95Shell } from './Products';
 
 export default function POS() {
-  const { logout, token } = useAuth();
+  const { logout, token, user } = useAuth();
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -13,11 +13,26 @@ export default function POS() {
   const [payMethod, setPayMethod] = useState('cash');
   const [receiptUrl, setReceiptUrl] = useState(null);
   const [search, setSearch] = useState('');
+  const [outlets, setOutlets] = useState([]);
+  const [selectedOutletId, setSelectedOutletId] = useState('');
 
   const searchRef = useRef(null);
 
   useEffect(() => {
     api.get('/products?limit=100').then(res => setProducts(res.data.products));
+
+    // Fetch outlets for admin selector
+    if (user?.role === 'admin') {
+      api.get('/outlets').then(res => {
+        const active = (res.data || []).filter(o => o.isActive !== false);
+        setOutlets(active);
+        if (active.length > 0 && !selectedOutletId) {
+          // Default to user's assigned outlet, or first outlet
+          const defaultOutlet = active.find(o => o.id === user.outletId) || active[0];
+          setSelectedOutletId(defaultOutlet.id);
+        }
+      }).catch(() => {});
+    }
 
     // Connect to WebSockets using VITE_API_URL (removes the /api suffix if present)
     const backendHost = import.meta.env.VITE_API_URL 
@@ -106,8 +121,9 @@ export default function POS() {
     try {
       const payload = {
         paymentMethod: payMethod,
-        origin: window.location.origin, // Tell API exactly what URL to put in the QR code
-        lineItems: cart.map(i => ({ sku: i.sku, name: i.name, qty: i.qty, unitPrice: i.unitPrice }))
+        origin: window.location.origin,
+        lineItems: cart.map(i => ({ sku: i.sku, name: i.name, qty: i.qty, unitPrice: i.unitPrice })),
+        ...(user?.role === 'admin' && selectedOutletId ? { outletId: selectedOutletId } : {}),
       };
       const res = await api.post('/sales', payload);
       setCart([]);
@@ -147,7 +163,8 @@ export default function POS() {
             </div>
 
             {/* Toolbar: Barcode + Search */}
-            <div style={{background:'var(--win-gray)',padding:'4px 8px',borderBottom:'1px solid var(--win-dark)',display:'flex',gap:6,alignItems:'center'}}>
+            <div style={{background:'var(--win-gray)',padding:'4px 8px',borderBottom:'1px solid var(--win-dark)',display:'flex',gap:6,alignItems:'center'}}
+              >
               <form onSubmit={handleBarcodeSubmit} style={{display:'flex',gap:4,flex:1}}>
                 <div className="win95-input-wrap" style={{flex:1}}>
                   <input
@@ -170,6 +187,22 @@ export default function POS() {
                   placeholder="🔍 Filter..."
                 />
               </div>
+              {/* Outlet selector for admin */}
+              {user?.role === 'admin' && outlets.length > 1 && (
+                <>
+                  <div style={{width:1,height:24,background:'var(--win-dark)',margin:'0 2px'}} />
+                  <div className="win95-input-wrap" style={{width:180}}>
+                    <select
+                      value={selectedOutletId}
+                      onChange={(e) => setSelectedOutletId(e.target.value)}
+                    >
+                      {outlets.map(o => (
+                        <option key={o.id} value={o.id}>🏪 {o.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Product Grid — CRT scanline effect */}

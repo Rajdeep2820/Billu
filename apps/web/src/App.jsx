@@ -11,6 +11,9 @@ import Products from './pages/Products';
 import Inventory from './pages/Inventory';
 import Import from './pages/Import';
 import Settings from './pages/Settings';
+import Outlets from './pages/Outlets';
+import CombinedAnalytics from './pages/CombinedAnalytics';
+import Staff from './pages/Staff';
 
 function ProtectedRoute({ children, role }) {
   const { isAuth, user } = useAuth();
@@ -33,6 +36,9 @@ function AppRoutes() {
       <Route path="/inventory" element={<ProtectedRoute role="admin"><Inventory /></ProtectedRoute>} />
       <Route path="/import" element={<ProtectedRoute role="admin"><Import /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      <Route path="/staff" element={<ProtectedRoute role="admin"><Staff /></ProtectedRoute>} />
+      <Route path="/outlets" element={<ProtectedRoute role="admin"><Outlets /></ProtectedRoute>} />
+      <Route path="/analytics" element={<ProtectedRoute role="admin"><CombinedAnalytics /></ProtectedRoute>} />
       <Route path="/pos" element={<ProtectedRoute><POS /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>

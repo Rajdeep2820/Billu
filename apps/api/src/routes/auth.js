@@ -137,13 +137,16 @@ router.post('/google', async (req, res, next) => {
 // POST /api/auth/login  — works for both merchant owner and cashier/staff
 router.post('/login', async (req, res, next) => {
   try {
-    const { email, password, outletId } = req.body;
+    const { email, password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: 'email and password are required' });
     }
 
     // Try user table first (cashiers/managers), then tenant table (owner)
-    let user = await prisma.user.findFirst({ where: { email } });
+    let user = await prisma.user.findFirst({
+      where: { email },
+      include: { outlet: { select: { id: true, isActive: true } } },
+    });
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -152,10 +155,15 @@ router.post('/login', async (req, res, next) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 
+    // Block login if the user's assigned outlet is deactivated (except admin who can access all)
+    if (user.role !== 'admin' && user.outlet && !user.outlet.isActive) {
+      return res.status(403).json({ error: 'Your assigned outlet is currently inactive. Contact your admin.' });
+    }
+
     const token = signToken({
       id: user.id,
       tenantId: user.tenantId,
-      outletId: outletId || user.outletId,
+      outletId: user.outletId, // Always from DB, never from client
       role: user.role,
       name: user.name,
     });
@@ -167,7 +175,7 @@ router.post('/login', async (req, res, next) => {
         name: user.name,
         role: user.role,
         tenantId: user.tenantId,
-        outletId: outletId || user.outletId,
+        outletId: user.outletId,
       },
     });
   } catch (err) {
@@ -175,26 +183,81 @@ router.post('/login', async (req, res, next) => {
   }
 });
 
+// GET /api/auth/staff  — admin/manager lists all staff
+router.get('/staff', require('../middleware/auth').authMiddleware, require('../middleware/auth').requireRole('admin', 'manager'), async (req, res, next) => {
+  try {
+    const users = await prisma.user.findMany({
+      where: { tenantId: req.user.tenantId },
+      select: { id: true, name: true, email: true, role: true, createdAt: true, outlet: { select: { id: true, name: true, isActive: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(users);
+  } catch (err) { next(err); }
+});
+
 // POST /api/auth/staff  — admin creates a cashier/manager user
 router.post('/staff', require('../middleware/auth').authMiddleware, require('../middleware/auth').requireRole('admin', 'manager'), async (req, res, next) => {
   try {
     const { name, email, password, role, outletId } = req.body;
+
+    // Validate outletId belongs to this tenant
+    const targetOutletId = outletId || req.user.outletId;
+    if (targetOutletId) {
+      const outlet = await prisma.outlet.findFirst({
+        where: { id: targetOutletId, tenantId: req.user.tenantId },
+      });
+      if (!outlet) return res.status(400).json({ error: 'Outlet not found or does not belong to this tenant' });
+    }
+
     const hashed = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
       data: {
         tenantId: req.user.tenantId,
-        outletId: outletId || req.user.outletId,
+        outletId: targetOutletId,
         name,
         email,
         password: hashed,
         role: role || 'cashier',
       },
+      include: { outlet: { select: { name: true } } },
     });
-    res.status(201).json({ id: user.id, name: user.name, email: user.email, role: user.role });
+    res.status(201).json({ id: user.id, name: user.name, email: user.email, role: user.role, outletId: user.outletId, outlet: user.outlet });
   } catch (err) {
     if (err.code === 'P2002') return res.status(409).json({ error: 'Email already exists in this tenant' });
     next(err);
   }
+});
+
+// PUT /api/auth/staff/:id  — admin updates a staff member's role or outlet
+router.put('/staff/:id', require('../middleware/auth').authMiddleware, require('../middleware/auth').requireRole('admin'), async (req, res, next) => {
+  try {
+    const { role, outletId, name } = req.body;
+    const targetId = req.params.id;
+
+    // Prevent changing own role here
+    if (targetId === req.user.id && role && role !== req.user.role) {
+      return res.status(400).json({ error: 'Cannot change your own role' });
+    }
+
+    const existing = await prisma.user.findFirst({ where: { id: targetId, tenantId: req.user.tenantId } });
+    if (!existing) return res.status(404).json({ error: 'User not found' });
+
+    if (outletId) {
+      const outlet = await prisma.outlet.findFirst({ where: { id: outletId, tenantId: req.user.tenantId } });
+      if (!outlet) return res.status(400).json({ error: 'Outlet not found' });
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: targetId },
+      data: {
+        ...(role && { role }),
+        ...(outletId && { outletId }),
+        ...(name && { name }),
+      },
+      select: { id: true, name: true, email: true, role: true, outlet: { select: { id: true, name: true } } },
+    });
+    res.json(updated);
+  } catch (err) { next(err); }
 });
 
 // GET /api/auth/me — enriched user profile
@@ -272,8 +335,12 @@ router.delete('/me', require('../middleware/auth').authMiddleware, async (req, r
 
     await prisma.$transaction(async (tx) => {
       // Order matters: delete child records first
+      await tx.acquisitionEvent.deleteMany({ where: { tenantId } });
+      await tx.inventoryMovement.deleteMany({ where: { tenantId } });
+      await tx.transactionItem.deleteMany({ where: { tenantId } });
       await tx.transaction.deleteMany({ where: { tenantId } });
       await tx.inventory.deleteMany({ where: { tenantId } });
+      await tx.customer.deleteMany({ where: { tenantId } });
       await tx.product.deleteMany({ where: { tenantId } });
       await tx.user.deleteMany({ where: { tenantId } });
       await tx.outlet.deleteMany({ where: { tenantId } });

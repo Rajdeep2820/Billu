@@ -12,6 +12,9 @@ export function Win95Shell({ children, activeWindow }) {
   const [clock, setClock] = useState('');
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark');
+  const [outletCount, setOutletCount] = useState(() => {
+    try { return parseInt(localStorage.getItem('billu_outlet_count') || '1'); } catch { return 1; }
+  });
 
   useEffect(() => {
     if (isDark) document.body.classList.add('dark-theme');
@@ -29,12 +32,29 @@ export function Win95Shell({ children, activeWindow }) {
     return () => clearInterval(id);
   }, []);
 
+  // Fetch outlet count for conditional nav (admin only)
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      const token = localStorage.getItem('billu_token');
+      if (token) {
+        api.get('/outlets').then(res => {
+          const active = (res.data || []).filter(o => o.isActive !== false).length;
+          setOutletCount(active);
+          localStorage.setItem('billu_outlet_count', String(active));
+        }).catch(() => {});
+      }
+    }
+  }, [user?.role, location.pathname]);
+
   const navItems = [
     { icon: '📊', label: 'Dashboard', path: '/dashboard' },
     { icon: '📦', label: 'Products', path: '/products' },
     { icon: '🛒', label: 'POS Terminal', path: '/pos' },
     { icon: '📋', label: 'Inventory', path: '/inventory' },
     { icon: '📁', label: 'Import CSV', path: '/import' },
+    ...(user?.role === 'admin' || user?.role === 'manager' ? [{ icon: '👥', label: 'Staff', path: '/staff' }] : []),
+    ...(user?.role === 'admin' ? [{ icon: '🏪', label: 'Outlets', path: '/outlets' }] : []),
+    ...(user?.role === 'admin' && outletCount > 1 ? [{ icon: '📈', label: 'Analytics', path: '/analytics' }] : []),
   ];
 
   return (

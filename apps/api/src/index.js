@@ -14,6 +14,8 @@ const salesRoutes = require('./routes/sales');
 const dashboardRoutes = require('./routes/dashboard');
 const importRoutes = require('./routes/import');
 const payRoutes = require('./routes/pay');
+const outletRoutes = require('./routes/outlets');
+const analyticsRoutes = require('./routes/analytics');
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -44,6 +46,8 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/import', importRoutes);
+app.use('/api/outlets', outletRoutes);
+app.use('/api/analytics', analyticsRoutes);
 app.use('/pay', payRoutes);
 
 // Health check

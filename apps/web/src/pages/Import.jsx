@@ -21,10 +21,24 @@ export default function Import() {
   const [sampleRows, setSampleRows] = useState([]);
   const [totalRows, setTotalRows] = useState(0);
   const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [outlets, setOutlets] = useState([]);
+  const [selectedOutletId, setSelectedOutletId] = useState('');
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (user?.role === 'admin' || user?.role === 'manager') {
+      api.get('/outlets').then(res => {
+        const activeOutlets = (res.data || []).filter(o => o.isActive);
+        setOutlets(activeOutlets);
+        if (activeOutlets.length > 0 && !selectedOutletId) {
+          const defaultOutlet = activeOutlets.find(o => o.id === user.outletId) || activeOutlets[0];
+          setSelectedOutletId(defaultOutlet.id);
+        }
+      }).catch(() => {});
+    }
+  }, [user]);
 
   const handleFile = useCallback(async (selectedFile) => {
     if (!selectedFile) return;
@@ -69,7 +83,7 @@ export default function Import() {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('mapping', JSON.stringify(mapping));
-    formData.append('outletId', user?.outletId || '');
+    formData.append('outletId', selectedOutletId || user?.outletId || '');
     formData.append('defaultQuantity', mapping.quantity ? '' : '100');
 
     try {
@@ -203,6 +217,24 @@ export default function Import() {
                   </div>
                 ))}
               </div>
+
+              {/* Outlet Selector (Admin/Manager only) */}
+              {(user?.role === 'admin' || user?.role === 'manager') && outlets.length > 0 && (
+                <div style={{marginTop: 16, borderTop: '1px solid #c0c0c0', paddingTop: 16, display: 'flex', alignItems: 'center', gap: 10}}>
+                  <div style={{width:160,fontSize:18,fontWeight:'bold'}}>Import to Outlet <span style={{color:'#cc0000'}}>*</span></div>
+                  <div style={{fontSize:20,color:'#808080'}}>→</div>
+                  <div className="win95-input-wrap" style={{flex:1}}>
+                    <select
+                      value={selectedOutletId}
+                      onChange={(e) => setSelectedOutletId(e.target.value)}
+                    >
+                      {outlets.map(o => (
+                        <option key={o.id} value={o.id}>{o.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Preview Table — collapsible */}

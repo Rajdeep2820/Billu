@@ -17,10 +17,14 @@ model Tenant {
   plan      String   @default("starter")
   createdAt DateTime @default(now()) @map("created_at")
 
-  outlets      Outlet[]
-  products     Product[]
-  transactions Transaction[]
-  users        User[]
+  outlets            Outlet[]
+  products           Product[]
+  transactions       Transaction[]
+  users              User[]
+  transactionItems   TransactionItem[]
+  inventoryMovements InventoryMovement[]
+  customers          Customer[]
+  acquisitionEvents  AcquisitionEvent[]
 
   @@map("tenants")
 }
@@ -49,13 +53,20 @@ model Outlet {
   name      String
   address   String?
   city      String?
+  state     String?
+  timezone  String   @default("Asia/Kolkata")
+  isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at")
 
-  tenant       Tenant        @relation(fields: [tenantId], references: [id])
-  inventory    Inventory[]
-  transactions Transaction[]
-  users        User[]
+  tenant             Tenant              @relation(fields: [tenantId], references: [id])
+  inventory          Inventory[]
+  transactions       Transaction[]
+  users              User[]
+  transactionItems   TransactionItem[]
+  inventoryMovements InventoryMovement[]
+  acquisitionEvents  AcquisitionEvent[]
 
+  @@index([tenantId, isActive])
   @@map("outlets")
 }
 
@@ -70,8 +81,10 @@ model Product {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  tenant    Tenant      @relation(fields: [tenantId], references: [id])
-  inventory Inventory[]
+  tenant             Tenant              @relation(fields: [tenantId], references: [id])
+  inventory          Inventory[]
+  transactionItems   TransactionItem[]
+  inventoryMovements InventoryMovement[]
 
   @@unique([tenantId, sku])
   @@map("products")
@@ -89,6 +102,7 @@ model Inventory {
   product Product @relation(fields: [productId], references: [id])
 
   @@unique([outletId, productId])
+  @@index([tenantId, outletId])
   @@map("inventory")
 }
 
@@ -97,6 +111,8 @@ model Transaction {
   tenantId        String   @map("tenant_id")
   outletId        String   @map("outlet_id")
   cashierId       String?  @map("cashier_id")
+  customerId      String?  @map("customer_id")
+  customerPhone   String?  @map("customer_phone")
   totalAmount     Decimal  @map("total_amount") @db.Decimal(12, 2)
   paymentMethod   String   @default("cash") @map("payment_method")
   lineItems       Json     @map("line_items")
@@ -104,9 +120,90 @@ model Transaction {
   idempotencyKey  String   @unique @map("idempotency_key")
   createdAt       DateTime @default(now()) @map("created_at")
 
-  tenant  Tenant @relation(fields: [tenantId], references: [id])
-  outlet  Outlet @relation(fields: [outletId], references: [id])
-  cashier User?  @relation(fields: [cashierId], references: [id])
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  outlet           Outlet            @relation(fields: [outletId], references: [id])
+  cashier          User?             @relation(fields: [cashierId], references: [id])
+  customer         Customer?         @relation(fields: [customerId], references: [id])
+  transactionItems TransactionItem[]
+  inventoryMovements InventoryMovement[]
 
+  @@index([tenantId, createdAt])
+  @@index([tenantId, outletId, createdAt])
   @@map("transactions")
+}
+
+model TransactionItem {
+  id              String   @id @default(uuid())
+  transactionId   String   @map("transaction_id")
+  tenantId        String   @map("tenant_id")
+  outletId        String   @map("outlet_id")
+  productId       String?  @map("product_id")
+  sku             String
+  name            String
+  qty             Int
+  unitPrice       Decimal  @map("unit_price") @db.Decimal(12, 2)
+  discountAmount  Decimal  @default(0) @map("discount_amount") @db.Decimal(12, 2)
+  taxAmount       Decimal  @default(0) @map("tax_amount") @db.Decimal(12, 2)
+  totalAmount     Decimal  @map("total_amount") @db.Decimal(12, 2)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  outlet      Outlet      @relation(fields: [outletId], references: [id])
+  product     Product?    @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, outletId, createdAt])
+  @@index([tenantId, productId])
+  @@map("transaction_items")
+}
+
+model InventoryMovement {
+  id            String   @id @default(uuid())
+  tenantId      String   @map("tenant_id")
+  outletId      String   @map("outlet_id")
+  productId     String   @map("product_id")
+  transactionId String?  @map("transaction_id")
+  type          String   // sale, purchase, adjustment, return, transfer_in, transfer_out
+  quantity      Int
+  unitCost      Decimal? @map("unit_cost") @db.Decimal(12, 2)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  outlet      Outlet       @relation(fields: [outletId], references: [id])
+  product     Product      @relation(fields: [productId], references: [id])
+  transaction Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, outletId, productId, createdAt])
+  @@map("inventory_movements")
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  name      String?
+  phone     String?
+  email     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  transactions Transaction[]
+
+  @@index([tenantId, phone])
+  @@map("customers")
+}
+
+model AcquisitionEvent {
+  id         String   @id @default(uuid())
+  tenantId   String   @map("tenant_id")
+  outletId   String?  @map("outlet_id")
+  source     String   // walk_in, referral, google, instagram, website, campaign, unknown
+  campaign   String?
+  customerId String?  @map("customer_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id])
+  outlet Outlet? @relation(fields: [outletId], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@map("acquisition_events")
 }

@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const { v4: uuidv4 } = require('uuid');
 const prisma = require('../services/prisma');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, validateOutletAccess } = require('../middleware/auth');
 const { atomicDecrement, getInventoryCache, setInventoryCache } = require('../services/redis');
 const receiptWorker = require('../workers/receiptWorker');
 
@@ -10,11 +10,23 @@ router.use(authMiddleware);
 // POST /api/sales  — create a transaction (POS checkout)
 router.post('/', async (req, res, next) => {
   try {
-    const { lineItems, paymentMethod, idempotencyKey, origin } = req.body;
-    const { tenantId, outletId, id: cashierId } = req.user;
+    const { lineItems, paymentMethod, idempotencyKey, origin, outletId: requestedOutletId, customerPhone } = req.body;
+    const { tenantId, outletId: userOutletId, id: cashierId, role } = req.user;
 
     if (!lineItems || !lineItems.length) {
       return res.status(400).json({ error: 'lineItems cannot be empty' });
+    }
+
+    // ── Resolve and validate outletId ──
+    let outletId = userOutletId;
+    if (requestedOutletId && (role === 'admin' || role === 'manager')) {
+      outletId = requestedOutletId;
+    }
+
+    // Validate outlet belongs to tenant AND is active
+    const outletCheck = await validateOutletAccess(outletId, req.user);
+    if (!outletCheck.valid) {
+      return res.status(403).json({ error: outletCheck.error });
     }
 
     // Generate idempotency key if not provided by client
@@ -60,31 +72,118 @@ router.post('/', async (req, res, next) => {
       return sum + parseFloat(item.unitPrice) * item.qty;
     }, 0);
 
-    // Save transaction
-    const transaction = await prisma.transaction.create({
-      data: {
-        tenantId,
-        outletId,
-        cashierId,
-        totalAmount,
-        paymentMethod: paymentMethod || 'cash',
-        lineItems,
-        idempotencyKey: iKey,
-      },
+    // Look up product IDs for TransactionItem linking
+    const productMap = {};
+    const products = await prisma.product.findMany({
+      where: { tenantId, sku: { in: lineItems.map(i => i.sku.toUpperCase()) } },
+      select: { id: true, sku: true },
     });
+    for (const p of products) productMap[p.sku] = p.id;
 
-    // Update inventory in DB asynchronously (fire and forget)
-    for (const item of lineItems) {
-      prisma.inventory
-        .updateMany({
-          where: {
+    // ── DB transaction: Transaction + TransactionItems + InventoryMovements + Inventory decrements ──
+    // All writes inside one atomic transaction — no fire-and-forget
+    let transaction;
+    try {
+      transaction = await prisma.$transaction(async (tx) => {
+        // 1. Auto-upsert Customer if customerPhone provided
+        let customerId = null;
+        if (customerPhone) {
+          const customer = await tx.customer.upsert({
+            where: {
+              // Use findFirst-style since no unique constraint on phone alone
+              // We'll search and create manually
+              id: 'PLACEHOLDER', // will fail, use below
+            },
+            create: { tenantId, phone: customerPhone },
+            update: {},
+          }).catch(async () => {
+            // No unique constraint on (tenantId, phone), so do manual find-or-create
+            let existing = await tx.customer.findFirst({
+              where: { tenantId, phone: customerPhone },
+            });
+            if (!existing) {
+              existing = await tx.customer.create({
+                data: { tenantId, phone: customerPhone },
+              });
+            }
+            return existing;
+          });
+          customerId = customer?.id || null;
+        }
+
+        // 2. Create transaction
+        const txn = await tx.transaction.create({
+          data: {
             tenantId,
             outletId,
-            product: { sku: item.sku },
+            cashierId,
+            customerId,
+            customerPhone: customerPhone || null,
+            totalAmount,
+            paymentMethod: paymentMethod || 'cash',
+            lineItems,
+            idempotencyKey: iKey,
           },
-          data: { quantity: { decrement: item.qty } },
-        })
-        .catch((err) => console.error('[DB] Inventory sync error:', err));
+        });
+
+        // 3. Create normalized TransactionItem rows
+        const txItemsData = lineItems.map(item => {
+          const itemTotal = parseFloat(item.unitPrice) * item.qty;
+          return {
+            transactionId: txn.id,
+            tenantId,
+            outletId,
+            productId: productMap[item.sku.toUpperCase()] || null,
+            sku: item.sku,
+            name: item.name,
+            qty: item.qty,
+            unitPrice: parseFloat(item.unitPrice),
+            discountAmount: parseFloat(item.discountAmount || 0),
+            taxAmount: parseFloat(item.taxAmount || 0),
+            totalAmount: itemTotal,
+          };
+        });
+        await tx.transactionItem.createMany({ data: txItemsData });
+
+        // 4. Decrement DB inventory (inside transaction, not fire-and-forget)
+        for (const item of lineItems) {
+          await tx.inventory.updateMany({
+            where: {
+              tenantId,
+              outletId,
+              product: { sku: item.sku },
+            },
+            data: { quantity: { decrement: item.qty } },
+          });
+        }
+
+        // 5. Create InventoryMovement records (inside transaction)
+        for (const item of lineItems) {
+          const productId = productMap[item.sku.toUpperCase()];
+          if (productId) {
+            await tx.inventoryMovement.create({
+              data: {
+                tenantId,
+                outletId,
+                productId,
+                transactionId: txn.id,
+                type: 'sale',
+                quantity: item.qty,
+              },
+            });
+          }
+        }
+
+        return txn;
+      });
+    } catch (dbError) {
+      // If DB transaction fails, Redis is now out of sync because we already decremented it.
+      // Invalidate the cache for these SKUs so they are re-fetched from DB on next request.
+      const { invalidateInventory } = require('../services/redis');
+      for (const item of lineItems) {
+        await invalidateInventory(tenantId, outletId, item.sku).catch(() => {});
+      }
+      throw dbError; // re-throw to be caught by outer try-catch
     }
 
     // Queue receipt generation
@@ -113,9 +212,21 @@ router.post('/', async (req, res, next) => {
 router.get('/', async (req, res, next) => {
   try {
     const { outletId, startDate, endDate, page = 1, limit = 20 } = req.query;
-    const where = { tenantId: req.user.tenantId };
+    const { tenantId, role } = req.user;
+    const where = { tenantId };
 
-    if (outletId) where.outletId = outletId;
+    // Non-admin/manager can only see their own outlet's sales
+    if (role !== 'admin' && role !== 'manager') {
+      where.outletId = req.user.outletId;
+    } else if (outletId) {
+      // Admin/manager can filter by outlet, but validate it belongs to tenant
+      const check = await validateOutletAccess(outletId, req.user);
+      if (!check.valid) {
+        return res.status(403).json({ error: check.error });
+      }
+      where.outletId = outletId;
+    }
+
     if (startDate || endDate) {
       where.createdAt = {};
       if (startDate) where.createdAt.gte = new Date(startDate);
@@ -147,6 +258,12 @@ router.get('/:id', async (req, res, next) => {
       include: { outlet: true },
     });
     if (!sale) return res.status(404).json({ error: 'Transaction not found' });
+
+    // Non-admin/manager can only see their own outlet's sales
+    if (req.user.role !== 'admin' && req.user.role !== 'manager' && sale.outletId !== req.user.outletId) {
+      return res.status(403).json({ error: 'You do not have access to this transaction' });
+    }
+
     res.json(sale);
   } catch (err) {
     next(err);

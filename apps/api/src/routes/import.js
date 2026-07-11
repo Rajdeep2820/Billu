@@ -3,7 +3,7 @@ const multer = require('multer');
 const { parse } = require('csv-parse/sync');
 const XLSX = require('xlsx');
 const prisma = require('../services/prisma');
-const { authMiddleware, requireRole } = require('../middleware/auth');
+const { authMiddleware, requireRole, validateOutletAccess } = require('../middleware/auth');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -73,6 +73,14 @@ router.post('/commit', upload.single('file'), async (req, res, next) => {
     const outletId = req.body.outletId || req.user.outletId;
     const defaultQuantity = parseInt(req.body.defaultQuantity || '0', 10);
     const { tenantId } = req.user;
+
+    // Validate outlet belongs to tenant and is active
+    if (outletId) {
+      const outletCheck = await validateOutletAccess(outletId, req.user);
+      if (!outletCheck.valid) {
+        return res.status(403).json({ error: outletCheck.error });
+      }
+    }
 
     const rows = parseFile(req.file.buffer, req.file.mimetype, req.file.originalname);
     const errors = [];

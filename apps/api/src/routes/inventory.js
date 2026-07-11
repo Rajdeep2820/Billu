@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const prisma = require('../services/prisma');
-const { authMiddleware, requireRole } = require('../middleware/auth');
+const { authMiddleware, requireRole, validateOutletAccess } = require('../middleware/auth');
 const {
   getInventoryCache,
   setInventoryCache,
@@ -14,9 +14,25 @@ router.use(authMiddleware);
 router.get('/', async (req, res, next) => {
   try {
     const { outletId } = req.query;
+    const { tenantId, role } = req.user;
+
+    // Non-admin/manager can only see their own outlet's inventory
+    let filterOutletId = outletId;
+    if (role !== 'admin' && role !== 'manager') {
+      filterOutletId = req.user.outletId;
+    }
+
+    // If an outletId is provided, validate it belongs to the tenant
+    if (filterOutletId) {
+      const result = await validateOutletAccess(filterOutletId, req.user);
+      if (!result.valid) {
+        return res.status(403).json({ error: result.error });
+      }
+    }
+
     const filter = {
-      tenantId: req.user.tenantId,
-      ...(outletId && { outletId }),
+      tenantId,
+      ...(filterOutletId && { outletId: filterOutletId }),
     };
 
     const items = await prisma.inventory.findMany({
@@ -35,6 +51,12 @@ router.put('/:outletId/:productId', requireRole('admin', 'manager'), async (req,
     const { outletId, productId } = req.params;
     const { quantity, mode } = req.body; // mode: 'set' | 'add' | 'subtract'
     const { tenantId } = req.user;
+
+    // Validate outlet belongs to tenant and is active
+    const outletResult = await validateOutletAccess(outletId, req.user);
+    if (!outletResult.valid) {
+      return res.status(403).json({ error: outletResult.error });
+    }
 
     // Verify product belongs to tenant
     const product = await prisma.product.findFirst({
@@ -75,6 +97,12 @@ router.post('/warm/:outletId', requireRole('admin', 'manager'), async (req, res,
   try {
     const { outletId } = req.params;
     const { tenantId } = req.user;
+
+    // Validate outlet access
+    const outletResult = await validateOutletAccess(outletId, req.user);
+    if (!outletResult.valid) {
+      return res.status(403).json({ error: outletResult.error });
+    }
 
     const items = await prisma.inventory.findMany({
       where: { outletId, tenantId },
