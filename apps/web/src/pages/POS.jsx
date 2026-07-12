@@ -14,7 +14,7 @@ export default function POS() {
   const [receiptUrl, setReceiptUrl] = useState(null);
   const [search, setSearch] = useState('');
   const [outlets, setOutlets] = useState([]);
-  const [selectedOutletId, setSelectedOutletId] = useState('');
+  const [selectedOutletId, setSelectedOutletId] = useState(() => localStorage.getItem('billu_admin_outlet_id') || '');
 
   const searchRef = useRef(null);
 
@@ -39,15 +39,29 @@ export default function POS() {
       api.get('/outlets').then(res => {
         const active = (res.data || []).filter(o => o.isActive !== false);
         setOutlets(active);
-        if (active.length > 0 && !selectedOutletId) {
+        
+        const savedId = localStorage.getItem('billu_admin_outlet_id');
+        const isValidSaved = active.some(o => o.id === savedId);
+
+        if (active.length > 0 && (!savedId || !isValidSaved)) {
           // Default to user's assigned outlet, or first outlet
           const defaultOutlet = active.find(o => o.id === user.outletId) || active[0];
           setSelectedOutletId(defaultOutlet.id);
+          localStorage.setItem('billu_admin_outlet_id', defaultOutlet.id);
+        } else if (isValidSaved) {
+          setSelectedOutletId(savedId);
         }
       }).catch(() => {});
     }
+  }, [user]);
 
+  useEffect(() => {
+    if (selectedOutletId) {
+      localStorage.setItem('billu_admin_outlet_id', selectedOutletId);
+    }
+  }, [selectedOutletId]);
 
+  useEffect(() => {
     // Connect to WebSockets using VITE_API_URL (removes the /api suffix if present)
     const backendHost = import.meta.env.VITE_API_URL 
       ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') 

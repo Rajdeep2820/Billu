@@ -11,7 +11,7 @@ export default function Inventory() {
   
   // Outlet filter state
   const [outlets, setOutlets] = useState([]);
-  const [selectedOutletId, setSelectedOutletId] = useState('');
+  const [selectedOutletId, setSelectedOutletId] = useState(() => localStorage.getItem('billu_admin_outlet_id') || '');
 
   // Adjustment state
   const [editingItem, setEditingItem] = useState(null);
@@ -24,9 +24,16 @@ export default function Inventory() {
       api.get('/outlets').then(res => {
         const activeOutlets = (res.data || []).filter(o => o.isActive);
         setOutlets(activeOutlets);
-        if (activeOutlets.length > 0) {
+        
+        const savedId = localStorage.getItem('billu_admin_outlet_id');
+        const isValidSaved = activeOutlets.some(o => o.id === savedId);
+
+        if (activeOutlets.length > 0 && (!savedId || !isValidSaved)) {
           const defaultOutlet = activeOutlets.find(o => o.id === user.outletId) || activeOutlets[0];
           setSelectedOutletId(defaultOutlet.id);
+          localStorage.setItem('billu_admin_outlet_id', defaultOutlet.id);
+        } else if (isValidSaved) {
+          setSelectedOutletId(savedId);
         } else {
           fetchInventory('');
         }
@@ -39,6 +46,7 @@ export default function Inventory() {
 
   useEffect(() => {
     if (selectedOutletId) {
+      localStorage.setItem('billu_admin_outlet_id', selectedOutletId);
       fetchInventory(selectedOutletId);
     }
   }, [selectedOutletId]);

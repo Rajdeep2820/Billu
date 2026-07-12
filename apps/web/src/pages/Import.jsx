@@ -25,7 +25,7 @@ export default function Import() {
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [outlets, setOutlets] = useState([]);
-  const [selectedOutletId, setSelectedOutletId] = useState('');
+  const [selectedOutletId, setSelectedOutletId] = useState(() => localStorage.getItem('billu_admin_outlet_id') || '');
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -33,13 +33,26 @@ export default function Import() {
       api.get('/outlets').then(res => {
         const activeOutlets = (res.data || []).filter(o => o.isActive);
         setOutlets(activeOutlets);
-        if (activeOutlets.length > 0 && !selectedOutletId) {
+        
+        const savedId = localStorage.getItem('billu_admin_outlet_id');
+        const isValidSaved = activeOutlets.some(o => o.id === savedId);
+
+        if (activeOutlets.length > 0 && (!savedId || !isValidSaved)) {
           const defaultOutlet = activeOutlets.find(o => o.id === user.outletId) || activeOutlets[0];
           setSelectedOutletId(defaultOutlet.id);
+          localStorage.setItem('billu_admin_outlet_id', defaultOutlet.id);
+        } else if (isValidSaved) {
+          setSelectedOutletId(savedId);
         }
       }).catch(() => {});
     }
   }, [user]);
+
+  useEffect(() => {
+    if (selectedOutletId) {
+      localStorage.setItem('billu_admin_outlet_id', selectedOutletId);
+    }
+  }, [selectedOutletId]);
 
   const handleFile = useCallback(async (selectedFile) => {
     if (!selectedFile) return;
