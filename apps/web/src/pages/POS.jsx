@@ -431,21 +431,20 @@ export default function POS() {
               {receiptUrl && receiptUrl !== '__queued__' && (
                 <div className="pos95-receipt-bar">
                   <span style={{color:'#008000',fontWeight:'bold'}}>✓ Sale complete!</span>
-                  <div style={{display:'flex',gap:6}}>
-                    <a href={receiptUrl} target="_blank" rel="noreferrer" className="win95-btn" style={{fontSize:14,padding:'2px 10px',minWidth:'auto',textDecoration:'none'}}>
-                      📄 View
-                    </a>
-                    <button
-                      className="win95-btn"
-                      style={{fontSize:14,padding:'2px 10px',minWidth:'auto'}}
-                      onClick={() => {
-                        const pw = window.open(receiptUrl, '_blank');
+                  <button
+                    className="win95-btn"
+                    style={{fontSize:14,padding:'4px 14px',minWidth:'auto'}}
+                    onClick={() => {
+                      // Open receipt in new tab (customer sees eBill + QR code)
+                      const pw = window.open(receiptUrl, '_blank');
+                      // Trigger print dialog as soon as the PDF loads (thermal printer)
+                      if (pw) {
                         pw.addEventListener('load', () => pw.print());
-                      }}
-                    >
-                      🖨️ Print
-                    </button>
-                  </div>
+                      }
+                    }}
+                  >
+                    🖨️ Print Bill
+                  </button>
                 </div>
               )}
 
