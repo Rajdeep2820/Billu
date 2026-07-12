@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../api/client';
 import { useAuth } from '../hooks/useAuth';
+import { usePosOffline } from '../hooks/usePosOffline';
 import { io } from 'socket.io-client';
 import { Win95Shell } from './Products';
 
 export default function POS() {
   const { logout, token, user } = useAuth();
-  const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(false);
   const [barcode, setBarcode] = useState('');
@@ -14,37 +14,33 @@ export default function POS() {
   const [receiptUrl, setReceiptUrl] = useState(null);
   const [search, setSearch] = useState('');
   const [outlets, setOutlets] = useState([]);
-  const [selectedOutletId, setSelectedOutletId] = useState(() => localStorage.getItem('billu_admin_outlet_id') || '');
+  const [selectedOutletId, setSelectedOutletId] = useState(
+    () => localStorage.getItem('billu_admin_outlet_id') || ''
+  );
 
   const searchRef = useRef(null);
 
-  useEffect(() => {
-    // Fetch products based on selected outlet (or assigned outlet)
-    if (selectedOutletId || user?.outletId) {
-      const targetOutlet = selectedOutletId || user.outletId;
-      api.get(`/inventory?outletId=${targetOutlet}`).then(res => {
-        // Map inventory items back to product shapes for the grid
-        const mappedProducts = res.data.map(inv => ({
-          ...inv.product,
-          stock: inv.quantity
-        }));
-        setProducts(mappedProducts);
-      }).catch(() => setProducts([]));
-    }
-  }, [selectedOutletId, user?.outletId]);
+  // ── Offline-capable product catalog + queue ────────────────────────────────
+  const {
+    products,
+    isOnline,
+    isSyncing,
+    pendingCount,
+    checkoutWithFallback,
+    refreshCatalog,
+  } = usePosOffline({ outletId: selectedOutletId, user });
 
+  // ── Fetch outlets for admin selector ──────────────────────────────────────
   useEffect(() => {
-    // Fetch outlets for admin selector
     if (user?.role === 'admin') {
       api.get('/outlets').then(res => {
         const active = (res.data || []).filter(o => o.isActive !== false);
         setOutlets(active);
-        
+
         const savedId = localStorage.getItem('billu_admin_outlet_id');
         const isValidSaved = active.some(o => o.id === savedId);
 
         if (active.length > 0 && (!savedId || !isValidSaved)) {
-          // Default to user's assigned outlet, or first outlet
           const defaultOutlet = active.find(o => o.id === user.outletId) || active[0];
           setSelectedOutletId(defaultOutlet.id);
           localStorage.setItem('billu_admin_outlet_id', defaultOutlet.id);
@@ -55,28 +51,27 @@ export default function POS() {
     }
   }, [user]);
 
+  // Persist selected outlet
   useEffect(() => {
     if (selectedOutletId) {
       localStorage.setItem('billu_admin_outlet_id', selectedOutletId);
     }
   }, [selectedOutletId]);
 
+  // ── WebSocket (receipt:ready events) ──────────────────────────────────────
   useEffect(() => {
-    // Connect to WebSockets using VITE_API_URL (removes the /api suffix if present)
-    const backendHost = import.meta.env.VITE_API_URL 
-      ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') 
-      : (window.location.hostname === 'localhost' ? (window.location.port === '5173' ? 'http://localhost:4000' : window.location.origin) : window.location.origin);
-    
-    const socketUrl = backendHost;
-    const socket = io(socketUrl, { auth: { token }, path: '/socket.io/' });
-    socket.on('receipt:ready', (data) => {
-      setReceiptUrl(data.receiptUrl);
-    });
+    const backendHost = import.meta.env.VITE_API_URL
+      ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '')
+      : (window.location.hostname === 'localhost'
+          ? (window.location.port === '5173' ? 'http://localhost:4000' : window.location.origin)
+          : window.location.origin);
 
+    const socket = io(backendHost, { auth: { token }, path: '/socket.io/' });
+    socket.on('receipt:ready', (data) => setReceiptUrl(data.receiptUrl));
     return () => socket.disconnect();
   }, [token]);
 
-  // Keyboard shortcuts
+  // ── Keyboard shortcuts ────────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e) => {
       if (e.key === 'F2') { e.preventDefault(); searchRef.current?.focus(); }
@@ -87,6 +82,7 @@ export default function POS() {
     return () => window.removeEventListener('keydown', handler);
   });
 
+  // ── Cart helpers ─────────────────────────────────────────────────────────
   const addToCart = (product) => {
     setReceiptUrl(null);
     setCart(prev => {
@@ -108,17 +104,28 @@ export default function POS() {
     }).filter(i => i.qty > 0));
   };
 
+  // ── Barcode scan (works offline using cached catalog) ────────────────────
   const handleBarcodeSubmit = async (e) => {
     e.preventDefault();
     if (!barcode.trim()) return;
+    const sku = barcode.trim().toUpperCase();
+
+    // First try local product list (works offline)
+    const localMatch = products.find(p => p.sku === sku);
+    if (localMatch) {
+      addToCart(localMatch);
+      setBarcode('');
+      return;
+    }
+
+    // Fallback to API (online only)
     try {
       setLoading(true);
       const targetOutlet = selectedOutletId || user?.outletId || '';
-      const res = await api.get(`/products/barcode/${barcode.trim().toUpperCase()}?outletId=${targetOutlet}`);
-      const product = res.data;
-      addToCart(product);
+      const res = await api.get(`/products/barcode/${sku}?outletId=${targetOutlet}`);
+      addToCart(res.data);
       setBarcode('');
-    } catch (err) {
+    } catch {
       alert(`Barcode ${barcode} not found!`);
       setBarcode('');
     } finally {
@@ -129,6 +136,7 @@ export default function POS() {
   const total = cart.reduce((sum, i) => sum + (parseFloat(i.unitPrice) * i.qty), 0);
   const itemCount = cart.reduce((sum, i) => sum + i.qty, 0);
 
+  // ── Receipt polling ───────────────────────────────────────────────────────
   const pollTimerRef = useRef(null);
 
   const pollForReceipt = (transactionId) => {
@@ -142,34 +150,41 @@ export default function POS() {
           clearInterval(pollTimerRef.current);
         }
       } catch (_) {}
-      if (attempts >= 15) clearInterval(pollTimerRef.current); // give up after 30s
+      if (attempts >= 15) clearInterval(pollTimerRef.current);
     }, 2000);
   };
 
+  // ── Checkout (online or offline fallback) ─────────────────────────────────
   const handleCheckout = async () => {
     if (!cart.length) return;
     setLoading(true);
     setReceiptUrl(null);
     if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-    try {
-      const payload = {
-        paymentMethod: payMethod,
-        origin: window.location.origin,
-        lineItems: cart.map(i => ({ sku: i.sku, name: i.name, qty: i.qty, unitPrice: i.unitPrice })),
-        ...(user?.role === 'admin' && selectedOutletId ? { outletId: selectedOutletId } : {}),
-      };
-      const res = await api.post('/sales', payload);
+
+    const payload = {
+      paymentMethod: payMethod,
+      origin: window.location.origin,
+      lineItems: cart.map(i => ({ sku: i.sku, name: i.name, qty: i.qty, unitPrice: i.unitPrice })),
+      ...(user?.role === 'admin' && selectedOutletId ? { outletId: selectedOutletId } : {}),
+    };
+
+    const result = await checkoutWithFallback(payload);
+
+    if (result.ok) {
       setCart([]);
-      // Start polling for receipt (socket is secondary; polling is reliable in Docker too)
-      if (res.data?.transaction?.id) {
-        pollForReceipt(res.data.transaction.id);
+      if (result.queued) {
+        // Offline — show a queued confirmation, no receipt link
+        setReceiptUrl('__queued__');
+      } else if (result.data?.transaction?.id) {
+        // Online — poll for receipt as usual
+        pollForReceipt(result.data.transaction.id);
       }
-    } catch (err) {
-      alert(err.response?.data?.error || 'Checkout failed');
-    } finally {
-      setLoading(false);
-      searchRef.current?.focus();
+    } else {
+      alert(result.error || 'Checkout failed');
     }
+
+    setLoading(false);
+    searchRef.current?.focus();
   };
 
   const filteredProducts = products.filter(p => {
@@ -177,6 +192,35 @@ export default function POS() {
     const q = search.toLowerCase();
     return p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q);
   });
+
+  // ── Status indicator ──────────────────────────────────────────────────────
+  const statusEl = (() => {
+    if (isSyncing) return (
+      <span style={{ fontSize: 11, color: '#0070d8', fontWeight: 'bold', letterSpacing: 0.5 }}>
+        🔄 Syncing {pendingCount} sale{pendingCount !== 1 ? 's' : ''}…
+      </span>
+    );
+    if (!isOnline && pendingCount > 0) return (
+      <span style={{ fontSize: 11, color: '#cc0000', fontWeight: 'bold', letterSpacing: 0.5 }}>
+        🔴 Offline — {pendingCount} sale{pendingCount !== 1 ? 's' : ''} pending
+      </span>
+    );
+    if (!isOnline) return (
+      <span style={{ fontSize: 11, color: '#cc0000', fontWeight: 'bold', letterSpacing: 0.5 }}>
+        🔴 Offline (cached catalog)
+      </span>
+    );
+    if (pendingCount > 0) return (
+      <span style={{ fontSize: 11, color: '#cc6600', fontWeight: 'bold', letterSpacing: 0.5 }}>
+        🟡 Online — syncing {pendingCount} queued sale{pendingCount !== 1 ? 's' : ''}…
+      </span>
+    );
+    return (
+      <span style={{ fontSize: 11, color: '#007700', fontWeight: 'bold', letterSpacing: 0.5 }}>
+        🟢 Online
+      </span>
+    );
+  })();
 
   return (
     <Win95Shell activeWindow="POS Terminal">
@@ -188,6 +232,9 @@ export default function POS() {
             {/* Title Bar */}
             <div className="win95-titlebar">
               <div className="win95-titlebar-text">🛒 Product Catalog</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto', marginRight: 8 }}>
+                {statusEl}
+              </div>
               <div className="win95-titlebar-controls">
                 <button className="win95-titlebar-btn win95-btn-minimize">_</button>
                 <button className="win95-titlebar-btn win95-btn-maximize">□</button>
@@ -196,8 +243,7 @@ export default function POS() {
             </div>
 
             {/* Toolbar: Barcode + Search */}
-            <div style={{background:'var(--win-gray)',padding:'4px 8px',borderBottom:'1px solid var(--win-dark)',display:'flex',gap:6,alignItems:'center'}}
-              >
+            <div style={{background:'var(--win-gray)',padding:'4px 8px',borderBottom:'1px solid var(--win-dark)',display:'flex',gap:6,alignItems:'center'}}>
               <form onSubmit={handleBarcodeSubmit} style={{display:'flex',gap:4,flex:1}}>
                 <div className="win95-input-wrap" style={{flex:1}}>
                   <input
@@ -236,9 +282,19 @@ export default function POS() {
                   </div>
                 </>
               )}
+              {/* Manual refresh button */}
+              <button
+                className="win95-btn"
+                title="Refresh product catalog"
+                style={{ padding: '2px 8px', fontSize: 14 }}
+                onClick={() => refreshCatalog()}
+                disabled={!isOnline}
+              >
+                ↺
+              </button>
             </div>
 
-            {/* Product Grid — CRT scanline effect */}
+            {/* Product Grid */}
             <div className="pos95-grid-area">
               <div className="pos95-grid">
                 {filteredProducts.map(p => (
@@ -250,7 +306,7 @@ export default function POS() {
                 ))}
                 {filteredProducts.length === 0 && (
                   <div style={{gridColumn:'1/-1',textAlign:'center',padding:40,color:'#808080'}}>
-                    No products found.
+                    {isOnline ? 'No products found.' : '📦 Showing cached catalog. Connect to load latest products.'}
                   </div>
                 )}
               </div>
@@ -329,11 +385,13 @@ export default function POS() {
                 disabled={cart.length === 0 || loading}
                 onClick={handleCheckout}
               >
-                {loading ? '⏳ Processing...' : `⚡ CHARGE Rs.${total.toFixed(2)} [F5]`}
+                {loading
+                  ? '⏳ Processing...'
+                  : `${isOnline ? '⚡' : '📦'} CHARGE Rs.${total.toFixed(2)} [F5]`}
               </button>
 
-              {/* Receipt Links */}
-              {receiptUrl && (
+              {/* Receipt / Confirmation */}
+              {receiptUrl && receiptUrl !== '__queued__' && (
                 <div className="pos95-receipt-bar">
                   <span style={{color:'#008000',fontWeight:'bold'}}>✓ Sale complete!</span>
                   <div style={{display:'flex',gap:6}}>
@@ -351,6 +409,14 @@ export default function POS() {
                       🖨️ Print
                     </button>
                   </div>
+                </div>
+              )}
+
+              {receiptUrl === '__queued__' && (
+                <div className="pos95-receipt-bar" style={{background:'rgba(204,102,0,0.08)',borderColor:'#cc6600'}}>
+                  <span style={{color:'#cc6600',fontWeight:'bold'}}>
+                    📦 Sale saved — will sync when online
+                  </span>
                 </div>
               )}
 
