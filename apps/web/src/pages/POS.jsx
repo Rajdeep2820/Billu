@@ -13,10 +13,13 @@ export default function POS() {
   const [payMethod, setPayMethod] = useState('cash');
   const [receiptUrl, setReceiptUrl] = useState(null);
   const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [outlets, setOutlets] = useState([]);
   const [selectedOutletId, setSelectedOutletId] = useState(
     () => localStorage.getItem('billu_admin_outlet_id') || ''
   );
+
+  const PAGE_SIZE = 24;
 
   const searchRef = useRef(null);
 
@@ -193,6 +196,12 @@ export default function POS() {
     return p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q);
   });
 
+  // Reset to page 1 whenever search or outlet changes
+  useEffect(() => { setCurrentPage(1); }, [search, selectedOutletId]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
+  const pagedProducts = filteredProducts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   // ── Status indicator ──────────────────────────────────────────────────────
   const statusEl = (() => {
     if (isSyncing) return (
@@ -297,19 +306,47 @@ export default function POS() {
             {/* Product Grid */}
             <div className="pos95-grid-area">
               <div className="pos95-grid">
-                {filteredProducts.map(p => (
+                {pagedProducts.map(p => (
                   <button key={p.id} className="pos95-product-tile" onClick={() => addToCart(p)}>
                     <div className="pos95-tile-name">{p.name}</div>
                     <div className="pos95-tile-sku">{p.sku}</div>
                     <div className="pos95-tile-price">Rs.{parseFloat(p.basePrice).toFixed(2)}</div>
                   </button>
                 ))}
-                {filteredProducts.length === 0 && (
+                {pagedProducts.length === 0 && (
                   <div style={{gridColumn:'1/-1',textAlign:'center',padding:40,color:'#808080'}}>
                     {isOnline ? 'No products found.' : '📦 Showing cached catalog. Connect to load latest products.'}
                   </div>
                 )}
               </div>
+
+              {/* Pagination bar */}
+              {totalPages > 1 && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  gap: 8, padding: '6px 8px', borderTop: '1px solid var(--win-dark)',
+                  background: 'var(--win-gray)', flexShrink: 0,
+                }}>
+                  <button
+                    className="win95-btn"
+                    style={{ padding: '2px 10px', fontSize: 13 }}
+                    disabled={currentPage <= 1}
+                    onClick={() => setCurrentPage(p => p - 1)}
+                  >◀ Prev</button>
+
+                  <span style={{ fontSize: 12, color: '#444', minWidth: 100, textAlign: 'center' }}>
+                    Page {currentPage} / {totalPages}
+                    &nbsp;({filteredProducts.length} items)
+                  </span>
+
+                  <button
+                    className="win95-btn"
+                    style={{ padding: '2px 10px', fontSize: 13 }}
+                    disabled={currentPage >= totalPages}
+                    onClick={() => setCurrentPage(p => p + 1)}
+                  >Next ▶</button>
+                </div>
+              )}
             </div>
           </div>
         </div>
