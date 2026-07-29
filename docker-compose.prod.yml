@@ -1,0 +1,31 @@
+# docker-compose.prod.yml
+# Production override — removes local Postgres, uses Supabase instead.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+services:
+  # ── Remove local Postgres — Supabase is used instead ─────────────────────────
+  postgres:
+    deploy:
+      replicas: 0   # disables the postgres container in production
+
+  # ── API — override DATABASE_URL to point to Supabase ─────────────────────────
+  api:
+    env_file:
+      - ./apps/api/.env.production
+    environment:
+      # These override anything set in docker-compose.yml or .env.production
+      DATABASE_URL: ${DATABASE_URL}
+      DIRECT_URL: ${DIRECT_URL}
+      NODE_ENV: production
+    depends_on:
+      redis:
+        condition: service_healthy
+    # No longer depends on postgres container
+
+  # ── Web — point to production API ─────────────────────────────────────────────
+  web:
+    build:
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost/api}

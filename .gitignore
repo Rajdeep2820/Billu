@@ -39,6 +39,7 @@ Thumbs.db
 .env.test.local
 .env.production.local
 apps/api/.env
+apps/api/.env.production
 apps/web/.env
 
 # Next.js / framework specific
