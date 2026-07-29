@@ -49,7 +49,17 @@ router.post('/register', async (req, res, next) => {
       name: result.user.name,
     });
 
-    res.status(201).json({ token, tenant: { id: result.tenant.id, name: result.tenant.name } });
+    res.status(201).json({
+      token,
+      tenant: { id: result.tenant.id, name: result.tenant.name },
+      user: {
+        id: result.user.id,
+        name: result.user.name,
+        role: 'admin',
+        tenantId: result.tenant.id,
+        outletId: result.outlet.id,
+      },
+    });
   } catch (err) {
     if (err.code === 'P2002') return res.status(409).json({ error: 'Email already registered' });
     next(err);

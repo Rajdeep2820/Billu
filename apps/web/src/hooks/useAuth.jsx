@@ -24,7 +24,7 @@ export function AuthProvider({ children }) {
 
   const register = useCallback(async (businessName, email, password) => {
     const { data } = await api.post('/auth/register', { businessName, email, password });
-    const u = { id: data.user?.id, email, role: 'admin', name: businessName + ' Admin', tenantId: data.tenant.id, outletId: data.user?.outletId };
+    const u = { id: data.user?.id, email, role: 'admin', name: data.user?.name || businessName + ' Admin', tenantId: data.tenant.id, outletId: data.user?.outletId };
     saveAuth(data.token, u);
     return { ...data, isNewUser: true };
   }, [saveAuth]);
