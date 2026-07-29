@@ -22,8 +22,10 @@ RUN npx prisma generate
 EXPOSE 4000
 
 # Required env vars at runtime:
-#   DATABASE_URL  — Supabase pooler URL (port 6543, for app queries)
-#   DIRECT_URL    — Supabase direct URL (port 5432, for migrations)
+#   DATABASE_URL — Supabase pooler URL (port 6543, for app queries)
+#   DIRECT_URL   — Supabase session pooler URL (port 5432, for Prisma introspection)
 #
-# Run migrations then start the server
-CMD ["sh", "-c", "npx prisma migrate deploy && node src/index.js"]
+# NOTE: Schema is managed via `prisma db push` or `prisma migrate deploy` run
+# manually. We do NOT run migrations on every startup to avoid connection
+# timeouts on cloud platforms.
+CMD ["node", "src/index.js"]
