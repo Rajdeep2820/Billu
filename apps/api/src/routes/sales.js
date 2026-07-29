@@ -2,7 +2,7 @@ const router = require('express').Router();
 const { v4: uuidv4 } = require('uuid');
 const prisma = require('../services/prisma');
 const { authMiddleware, validateOutletAccess } = require('../middleware/auth');
-const { atomicDecrement, getInventoryCache, setInventoryCache } = require('../services/redis');
+const { atomicDecrement, getInventoryCache, setInventoryCache, invalidateInventory } = require('../services/redis');
 const receiptWorker = require('../workers/receiptWorker');
 
 router.use(authMiddleware);
@@ -85,30 +85,19 @@ router.post('/', async (req, res, next) => {
     let transaction;
     try {
       transaction = await prisma.$transaction(async (tx) => {
-        // 1. Auto-upsert Customer if customerPhone provided
+        // 1. Find-or-create Customer by phone (no unique constraint on phone alone,
+        //    so we use findFirst + create manually)
         let customerId = null;
         if (customerPhone) {
-          const customer = await tx.customer.upsert({
-            where: {
-              // Use findFirst-style since no unique constraint on phone alone
-              // We'll search and create manually
-              id: 'PLACEHOLDER', // will fail, use below
-            },
-            create: { tenantId, phone: customerPhone },
-            update: {},
-          }).catch(async () => {
-            // No unique constraint on (tenantId, phone), so do manual find-or-create
-            let existing = await tx.customer.findFirst({
-              where: { tenantId, phone: customerPhone },
-            });
-            if (!existing) {
-              existing = await tx.customer.create({
-                data: { tenantId, phone: customerPhone },
-              });
-            }
-            return existing;
+          let customer = await tx.customer.findFirst({
+            where: { tenantId, phone: customerPhone },
           });
-          customerId = customer?.id || null;
+          if (!customer) {
+            customer = await tx.customer.create({
+              data: { tenantId, phone: customerPhone },
+            });
+          }
+          customerId = customer.id;
         }
 
         // 2. Create transaction
@@ -179,7 +168,7 @@ router.post('/', async (req, res, next) => {
     } catch (dbError) {
       // If DB transaction fails, Redis is now out of sync because we already decremented it.
       // Invalidate the cache for these SKUs so they are re-fetched from DB on next request.
-      const { invalidateInventory } = require('../services/redis');
+      // invalidateInventory is imported at the top of the file
       for (const item of lineItems) {
         await invalidateInventory(tenantId, outletId, item.sku).catch(() => {});
       }
