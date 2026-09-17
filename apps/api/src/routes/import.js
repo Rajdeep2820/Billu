@@ -30,6 +30,17 @@ function detectMapping(headers) {
   return mapping;
 }
 
+// Auto-generate a SKU from product name when no SKU column is present
+// e.g. "Besan Laddoo 500g" → "BESAN-LADDOO-500G"
+function generateSku(name) {
+  return name
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .substring(0, 24);
+}
+
 function parseFile(buffer, mimetype, originalname) {
   const ext = originalname.split('.').pop().toLowerCase();
   if (ext === 'csv') {
@@ -90,16 +101,19 @@ router.post('/commit', upload.single('file'), async (req, res, next) => {
       const row = rows[i];
       const rowNum = i + 2; // 1-indexed + header row
 
-      const sku = String(row[mapping.sku] || '').trim().toUpperCase();
       const name = String(row[mapping.name] || '').trim();
+      // Use mapped SKU column, or auto-generate from name if no SKU column
+      const sku = mapping.sku
+        ? String(row[mapping.sku] || '').trim().toUpperCase()
+        : generateSku(name);
       const basePrice = parseFloat(row[mapping.basePrice]);
       const category = String(row[mapping.category] || 'general').trim().toLowerCase();
       const rawQty = mapping.quantity ? parseInt(row[mapping.quantity] || 0, 10) : defaultQuantity;
       const quantity = isNaN(rawQty) ? defaultQuantity : rawQty;
 
       // Validation
-      if (!sku) { errors.push({ row: rowNum, error: 'Missing SKU' }); continue; }
-      if (!name) { errors.push({ row: rowNum, error: 'Missing name' }); continue; }
+      if (!name) { errors.push({ row: rowNum, error: 'Missing product name' }); continue; }
+      if (!sku)  { errors.push({ row: rowNum, error: 'Could not generate SKU (name is empty)' }); continue; }
       if (isNaN(basePrice) || basePrice <= 0) { errors.push({ row: rowNum, error: 'Invalid price' }); continue; }
 
       try {

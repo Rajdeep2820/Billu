@@ -4,11 +4,11 @@ import { Win95Shell, Win95Window } from './Products';
 import api from '../api/client';
 
 const BILLU_FIELDS = [
-  { key: 'sku', label: 'SKU / Barcode', required: true },
-  { key: 'name', label: 'Product Name', required: true },
-  { key: 'basePrice', label: 'Price (Rs.)', required: true },
-  { key: 'category', label: 'Category', required: false },
-  { key: 'quantity', label: 'Stock Quantity', required: false },
+  { key: 'sku',       label: 'SKU / Barcode', required: false },
+  { key: 'name',      label: 'Product Name',  required: true  },
+  { key: 'basePrice', label: 'Price (Rs.)',    required: true  },
+  { key: 'category',  label: 'Category',       required: false },
+  { key: 'quantity',  label: 'Stock Quantity', required: false },
 ];
 
 export default function Import() {
@@ -207,8 +207,9 @@ export default function Import() {
             {/* Mapping Section */}
             <div className="win95-section-header">► Column Mapping</div>
             <div className="win95-raised" style={{padding:12,marginBottom:10}}>
-              <div style={{fontSize:16,color:'#808080',marginBottom:10}}>
+              <div style={{fontSize:14, color:'#808080', marginBottom:10}}>
                 Map your file columns to Billu POS fields. Auto-detected mappings shown below.
+                <br/>💡 <strong>SKU</strong> is optional — if your file has no SKU/barcode column, one will be auto-generated from the product name.
               </div>
               <div style={{display:'grid',gap:8}}>
                 {BILLU_FIELDS.map(field => (
@@ -296,7 +297,7 @@ export default function Import() {
               <button className="win95-btn" onClick={resetAll}>Cancel</button>
               <button
                 className="win95-btn win95-btn-primary"
-                disabled={!mapping.sku || !mapping.name || !mapping.basePrice}
+              disabled={!mapping.name || !mapping.basePrice}
                 onClick={handleCommit}
               >
                 Import {totalRows} Products
