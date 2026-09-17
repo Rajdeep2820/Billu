@@ -15,35 +15,49 @@ import Outlets from './pages/Outlets';
 import CombinedAnalytics from './pages/CombinedAnalytics';
 import Staff from './pages/Staff';
 
-function ProtectedRoute({ children, role }) {
+function ProtectedRoute({ children, allowedRoles }) {
   const { isAuth, user } = useAuth();
   if (!isAuth) return <Navigate to="/login" />;
-  if (role && user?.role !== role) {
-    return <Navigate to={user?.role === 'admin' ? '/dashboard' : '/pos'} />;
+  if (allowedRoles && !allowedRoles.includes(user?.role)) {
+    // Redirect to the best page for their role
+    const fallback = user?.role === 'admin' || user?.role === 'manager'
+      ? '/dashboard'
+      : '/pos';
+    return <Navigate to={fallback} />;
   }
   return children;
 }
 
+const ADMIN_ONLY   = ['admin'];
+const ADMIN_MGR    = ['admin', 'manager'];
+
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/"           element={<Landing />} />
+      <Route path="/login"      element={<Login />} />
+      <Route path="/register"   element={<Register />} />
       <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-      <Route path="/dashboard" element={<ProtectedRoute role="admin"><Dashboard /></ProtectedRoute>} />
-      <Route path="/products" element={<ProtectedRoute role="admin"><Products /></ProtectedRoute>} />
-      <Route path="/inventory" element={<ProtectedRoute role="admin"><Inventory /></ProtectedRoute>} />
-      <Route path="/import" element={<ProtectedRoute role="admin"><Import /></ProtectedRoute>} />
-      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-      <Route path="/staff" element={<ProtectedRoute role="admin"><Staff /></ProtectedRoute>} />
-      <Route path="/outlets" element={<ProtectedRoute role="admin"><Outlets /></ProtectedRoute>} />
-      <Route path="/analytics" element={<ProtectedRoute role="admin"><CombinedAnalytics /></ProtectedRoute>} />
-      <Route path="/pos" element={<ProtectedRoute><POS /></ProtectedRoute>} />
+
+      {/* Admin + Manager */}
+      <Route path="/dashboard"  element={<ProtectedRoute allowedRoles={ADMIN_MGR}><Dashboard /></ProtectedRoute>} />
+      <Route path="/products"   element={<ProtectedRoute allowedRoles={ADMIN_MGR}><Products /></ProtectedRoute>} />
+      <Route path="/inventory"  element={<ProtectedRoute allowedRoles={ADMIN_MGR}><Inventory /></ProtectedRoute>} />
+      <Route path="/import"     element={<ProtectedRoute allowedRoles={ADMIN_MGR}><Import /></ProtectedRoute>} />
+
+      {/* Admin only */}
+      <Route path="/staff"      element={<ProtectedRoute allowedRoles={ADMIN_ONLY}><Staff /></ProtectedRoute>} />
+      <Route path="/outlets"    element={<ProtectedRoute allowedRoles={ADMIN_ONLY}><Outlets /></ProtectedRoute>} />
+      <Route path="/analytics"  element={<ProtectedRoute allowedRoles={ADMIN_ONLY}><CombinedAnalytics /></ProtectedRoute>} />
+
+      {/* All authenticated users */}
+      <Route path="/settings"   element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      <Route path="/pos"        element={<ProtectedRoute><POS /></ProtectedRoute>} />
+
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
-}
+
 
 export default function App() {
   return (

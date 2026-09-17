@@ -32,7 +32,7 @@ export function Win95Shell({ children, activeWindow }) {
     return () => clearInterval(id);
   }, []);
 
-  // Fetch outlet count for conditional nav (admin only)
+  // Fetch outlet count for admin (for Analytics nav visibility)
   useEffect(() => {
     if (user?.role === 'admin') {
       const token = localStorage.getItem('billu_token');
@@ -46,15 +46,29 @@ export function Win95Shell({ children, activeWindow }) {
     }
   }, [user?.role, location.pathname]);
 
+  const isAdminOrManager = user?.role === 'admin' || user?.role === 'manager';
+
   const navItems = [
-    { icon: '📊', label: 'Dashboard', path: '/dashboard' },
-    { icon: '📦', label: 'Products', path: '/products' },
+    // Admin + Manager pages
+    ...(isAdminOrManager ? [
+      { icon: '📊', label: 'Dashboard',  path: '/dashboard' },
+      { icon: '📦', label: 'Products',   path: '/products' },
+    ] : []),
+    // Everyone
     { icon: '🛒', label: 'POS Terminal', path: '/pos' },
-    { icon: '📋', label: 'Inventory', path: '/inventory' },
-    { icon: '📁', label: 'Import CSV', path: '/import' },
-    ...(user?.role === 'admin' || user?.role === 'manager' ? [{ icon: '👥', label: 'Staff', path: '/staff' }] : []),
-    ...(user?.role === 'admin' ? [{ icon: '🏪', label: 'Outlets', path: '/outlets' }] : []),
-    ...(user?.role === 'admin' && outletCount > 1 ? [{ icon: '📈', label: 'Analytics', path: '/analytics' }] : []),
+    // Admin + Manager pages
+    ...(isAdminOrManager ? [
+      { icon: '📋', label: 'Inventory',  path: '/inventory' },
+      { icon: '📁', label: 'Import CSV', path: '/import' },
+    ] : []),
+    // Admin-only pages
+    ...(user?.role === 'admin' ? [
+      { icon: '👥', label: 'Staff',    path: '/staff' },
+      { icon: '🏪', label: 'Outlets',  path: '/outlets' },
+    ] : []),
+    ...(user?.role === 'admin' && outletCount > 1 ? [
+      { icon: '📈', label: 'Analytics', path: '/analytics' },
+    ] : []),
   ];
 
   return (
