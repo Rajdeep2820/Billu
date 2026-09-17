@@ -20,10 +20,37 @@ const analyticsRoutes = require('./routes/analytics');
 const app = express();
 const httpServer = http.createServer(app);
 
+// ── CORS ───────────────────────────────────────────────────────────────────────
+// Set ALLOWED_ORIGINS in your environment as a comma-separated list of URLs,
+// e.g.  ALLOWED_ORIGINS=https://billu-pos.vercel.app,https://billu.yourdomain.com
+//
+// Localhost ports are always allowed for local development.
+const DEV_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+];
+
+const PROD_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+const ALLOWED_ORIGINS = [...DEV_ORIGINS, ...PROD_ORIGINS];
+
 const corsOptions = {
-  origin: function (origin, callback) { callback(null, true); },
-  credentials: true
+  origin: function (origin, callback) {
+    // Allow server-to-server requests (no origin header, e.g. curl / Postman)
+    // and any explicitly whitelisted origin.
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: origin '${origin}' not allowed`));
+    }
+  },
+  credentials: true,
 };
+
 
 // Socket.io setup
 const io = new Server(httpServer, { cors: corsOptions });
