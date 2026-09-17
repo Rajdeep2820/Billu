@@ -57,7 +57,7 @@ function AppRoutes() {
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
-
+}
 
 export default function App() {
   return (
